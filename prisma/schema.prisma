@@ -110,32 +110,8 @@ model Snippet {
   createdAt      DateTime   @default(now()) @map("created_at")
   updatedAt      DateTime   @updatedAt @map("updated_at")
 
-  templatesAsIntro Template[] @relation("TemplateIntroSnippet")
-  templatesAsTerms Template[] @relation("TemplateTermsSnippet")
-
   @@index([type, language])
   @@map("snippets")
-}
-
-model Template {
-  id                String   @id @default(cuid())
-  name              String
-  language          Language
-  defaultCurrency   String   @map("default_currency")
-  defaultVatEnabled Boolean  @default(true) @map("default_vat_enabled")
-  introSnippetId    String?  @map("intro_snippet_id")
-  termsSnippetId    String?  @map("terms_snippet_id")
-  scopePreset       Json     @map("scope_preset")
-  itemsPreset       Json     @map("items_preset")
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
-
-  introSnippet Snippet? @relation("TemplateIntroSnippet", fields: [introSnippetId], references: [id], onDelete: SetNull)
-  termsSnippet Snippet? @relation("TemplateTermsSnippet", fields: [termsSnippetId], references: [id], onDelete: SetNull)
-
-  @@index([name])
-  @@index([language])
-  @@map("templates")
 }
 
 model Quote {
