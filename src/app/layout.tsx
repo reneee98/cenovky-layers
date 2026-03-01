@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Toaster } from "@/components/ui/shadcn";
 import "./globals.css";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Cenovka",
   description: "MVP tvorca cenovych ponuk s PDF exportom",
