@@ -1,4 +1,6 @@
-import { Language, Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
+
+type Language = Prisma.$Enums.Language;
 
 export const SETTINGS_SINGLETON_ID = 1;
 

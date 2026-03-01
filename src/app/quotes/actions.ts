@@ -1,6 +1,6 @@
 "use server";
 
-import { Prisma, QuoteStatus } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -13,6 +13,8 @@ import {
 } from "@/server/repositories";
 import { isQuoteStatus } from "@/lib/quotes/status";
 import { reserveNextQuoteNumber } from "@/server/quotes/numbering";
+
+type QuoteStatus = Prisma.$Enums.QuoteStatus;
 
 function buildQuotesUrl(query: Record<string, string>): string {
   const params = new URLSearchParams(query);

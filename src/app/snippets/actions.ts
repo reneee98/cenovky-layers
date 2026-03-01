@@ -1,10 +1,13 @@
 "use server";
 
-import { Language, Prisma, SnippetType } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { createSnippet, deleteSnippet, updateSnippet } from "@/server/repositories";
+
+type Language = Prisma.$Enums.Language;
+type SnippetType = Prisma.$Enums.SnippetType;
 
 type SnippetFormFieldErrors = Partial<
   Record<"type" | "language" | "title" | "content_markdown", string>

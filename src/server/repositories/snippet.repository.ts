@@ -1,6 +1,9 @@
-import { Language, Prisma, Snippet, SnippetType } from "@prisma/client";
+import { Prisma, Snippet } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
+
+type Language = Prisma.$Enums.Language;
+type SnippetType = Prisma.$Enums.SnippetType;
 
 export type ListSnippetFilters = {
   type?: SnippetType;

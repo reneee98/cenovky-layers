@@ -1,6 +1,6 @@
 "use server";
 
-import { Prisma, Unit } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -9,6 +9,8 @@ import {
   deleteCatalogItem,
   updateCatalogItem,
 } from "@/server/repositories";
+
+type Unit = Prisma.$Enums.Unit;
 
 type CatalogFormFieldErrors = Partial<
   Record<

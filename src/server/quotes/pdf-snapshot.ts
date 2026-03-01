@@ -1,4 +1,9 @@
-import { Language, QuoteStatus, TotalDiscountType, Unit } from "@prisma/client";
+import { Prisma } from "@prisma/client";
+
+type Language = Prisma.$Enums.Language;
+type QuoteStatus = Prisma.$Enums.QuoteStatus;
+type TotalDiscountType = Prisma.$Enums.TotalDiscountType;
+type Unit = Prisma.$Enums.Unit;
 
 export type QuoteVersionSnapshot = {
   schemaVersion: 1;

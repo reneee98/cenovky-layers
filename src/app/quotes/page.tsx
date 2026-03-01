@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { QuoteStatus } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 
 import {
   changeQuoteStatusAction,
@@ -35,6 +35,8 @@ import {
   listQuotesWithDetails,
 } from "@/server/repositories";
 import { calculateQuoteTotals } from "@/server/quotes/totals";
+
+type QuoteStatus = Prisma.$Enums.QuoteStatus;
 
 function parseDateStart(value?: string): Date | undefined {
   if (!value) {

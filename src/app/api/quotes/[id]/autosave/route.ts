@@ -1,10 +1,15 @@
-import { Language, QuoteStatus, TotalDiscountType, Unit } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 
 import { QUOTE_ITEM_SECTION_MARKER } from "@/lib/quotes/items";
 import { isQuoteStatus } from "@/lib/quotes/status";
 import { prisma } from "@/lib/prisma";
+
+type Language = Prisma.$Enums.Language;
+type QuoteStatus = Prisma.$Enums.QuoteStatus;
+type TotalDiscountType = Prisma.$Enums.TotalDiscountType;
+type Unit = Prisma.$Enums.Unit;
 
 type AutosaveQuoteItemPayload = {
   name: string;
