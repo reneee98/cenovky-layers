@@ -3,6 +3,8 @@ import type { Prisma } from "@/types/prisma";
 import { prisma } from "@/lib/prisma";
 import { buildDefaultSettingsCreateInput } from "@/server/db/settings-defaults";
 
+const LEGACY_USER_ID = "legacy-user";
+
 const STARTER_SNIPPETS: Array<Pick<Prisma.SnippetUncheckedCreateInput, "type" | "language" | "title" | "contentMarkdown">> = [
   {
     type: "intro",
@@ -75,7 +77,100 @@ const STARTER_CATALOG_ITEMS: Array<Pick<Prisma.CatalogItemUncheckedCreateInput, 
   },
 ];
 
+async function claimLegacyWorkspaceForUser(userId: string): Promise<boolean> {
+  return prisma.$transaction(async (tx) => {
+    const [userClients, userQuotes, userCatalogItems, userSnippets] = await Promise.all([
+      tx.client.count({ where: { userId } }),
+      tx.quote.count({ where: { userId } }),
+      tx.catalogItem.count({ where: { userId } }),
+      tx.snippet.count({ where: { userId } }),
+    ]);
+
+    const userHasCoreData =
+      userClients > 0 || userQuotes > 0 || userCatalogItems > 0 || userSnippets > 0;
+
+    if (userHasCoreData) {
+      return false;
+    }
+
+    const [legacyClients, legacyQuotes, legacyCatalogItems, legacySnippets] = await Promise.all([
+      tx.client.count({ where: { userId: LEGACY_USER_ID } }),
+      tx.quote.count({ where: { userId: LEGACY_USER_ID } }),
+      tx.catalogItem.count({ where: { userId: LEGACY_USER_ID } }),
+      tx.snippet.count({ where: { userId: LEGACY_USER_ID } }),
+    ]);
+
+    const legacyHasCoreData =
+      legacyClients > 0 || legacyQuotes > 0 || legacyCatalogItems > 0 || legacySnippets > 0;
+
+    if (!legacyHasCoreData) {
+      return false;
+    }
+
+    const legacySettings = await tx.settings.findFirst({
+      where: { userId: LEGACY_USER_ID },
+      orderBy: { id: "asc" },
+      select: { id: true },
+    });
+
+    await tx.settings.deleteMany({ where: { userId } });
+
+    if (legacySettings) {
+      await tx.settings.update({
+        where: { id: legacySettings.id },
+        data: { userId },
+      });
+
+      await tx.settings.deleteMany({
+        where: {
+          userId: LEGACY_USER_ID,
+          id: { not: legacySettings.id },
+        },
+      });
+    }
+
+    await tx.client.updateMany({
+      where: { userId: LEGACY_USER_ID },
+      data: { userId },
+    });
+
+    await tx.catalogItem.updateMany({
+      where: { userId: LEGACY_USER_ID },
+      data: { userId },
+    });
+
+    await tx.snippet.updateMany({
+      where: { userId: LEGACY_USER_ID },
+      data: { userId },
+    });
+
+    await tx.quote.updateMany({
+      where: { userId: LEGACY_USER_ID },
+      data: { userId },
+    });
+
+    await tx.quoteItem.updateMany({
+      where: { userId: LEGACY_USER_ID },
+      data: { userId },
+    });
+
+    await tx.scopeItem.updateMany({
+      where: { userId: LEGACY_USER_ID },
+      data: { userId },
+    });
+
+    await tx.quoteVersion.updateMany({
+      where: { userId: LEGACY_USER_ID },
+      data: { userId },
+    });
+
+    return true;
+  });
+}
+
 export async function ensureUserBootstrapData(userId: string): Promise<void> {
+  await claimLegacyWorkspaceForUser(userId);
+
   await prisma.settings.upsert({
     where: { userId },
     create: buildDefaultSettingsCreateInput(userId),

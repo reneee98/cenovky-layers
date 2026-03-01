@@ -1,7 +1,7 @@
 -- Supabase owner migration
 -- Purpose:
 -- 1) add user_id to app tables
--- 2) backfill existing rows to first auth user (legacy single-user data)
+-- 2) backfill existing rows to legacy placeholder (legacy single-user data)
 -- 3) enforce owner constraints and scoped uniqueness
 
 begin;
@@ -16,25 +16,16 @@ alter table public.quote_items add column if not exists user_id text;
 alter table public.scope_items add column if not exists user_id text;
 alter table public.quote_versions add column if not exists user_id text;
 
--- 2) Backfill legacy rows to first auth user.
+-- 2) Backfill legacy rows to placeholder owner.
 do $$
 declare
-  owner_id text;
+  legacy_owner_id constant text := 'legacy-user';
 begin
-  select id::text into owner_id
-  from auth.users
-  order by created_at asc
-  limit 1;
-
-  if owner_id is null then
-    raise exception 'No auth.users row found. Create at least one user before running migration.';
-  end if;
-
-  update public.settings set user_id = owner_id where user_id is null;
-  update public.clients set user_id = owner_id where user_id is null;
-  update public.catalog_items set user_id = owner_id where user_id is null;
-  update public.snippets set user_id = owner_id where user_id is null;
-  update public.quotes set user_id = owner_id where user_id is null;
+  update public.settings set user_id = legacy_owner_id where user_id is null;
+  update public.clients set user_id = legacy_owner_id where user_id is null;
+  update public.catalog_items set user_id = legacy_owner_id where user_id is null;
+  update public.snippets set user_id = legacy_owner_id where user_id is null;
+  update public.quotes set user_id = legacy_owner_id where user_id is null;
 
   update public.quote_items qi
   set user_id = q.user_id
@@ -70,6 +61,7 @@ drop index if exists public.quotes_number_key;
 create unique index if not exists quotes_user_id_number_key on public.quotes(user_id, number);
 
 -- 5) Add owner-scoped unique keys used by Prisma composite lookups.
+create unique index if not exists settings_user_id_key on public.settings(user_id);
 create unique index if not exists clients_id_user_id_key on public.clients(id, user_id);
 create unique index if not exists catalog_items_id_user_id_key on public.catalog_items(id, user_id);
 create unique index if not exists snippets_id_user_id_key on public.snippets(id, user_id);

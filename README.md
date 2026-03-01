@@ -15,6 +15,10 @@ Run in Supabase SQL editor:
 1. `sql/supabase_auth_owner_migration.sql`
 2. `sql/supabase_rls_policies.sql`
 
+Legacy data note:
+- existing pre-auth offers are tagged as `legacy-user`
+- first freshly signed-in user in app automatically claims this legacy workspace
+
 ## Getting Started
 
 Run the development server:
