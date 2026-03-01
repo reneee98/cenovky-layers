@@ -112,7 +112,35 @@ export async function signupAction(formData: FormData): Promise<void> {
   });
 
   if (error) {
-    redirect(buildPath("/auth/signup", { error: "Registracia zlyhala. Skus to znova." }));
+    const normalizedError = error.message.toLowerCase();
+    const userExists =
+      normalizedError.includes("already registered") ||
+      normalizedError.includes("already exists");
+
+    if (userExists) {
+      redirect(
+        buildPath("/auth/login", {
+          notice: "Ucet s tymto emailom uz existuje. Prihlas sa.",
+        }),
+      );
+    }
+
+    redirect(
+      buildPath("/auth/signup", {
+        error: "Registracia zlyhala. Skontroluj udaje a skus to znova.",
+      }),
+    );
+  }
+
+  const identities = (data.user as { identities?: Array<unknown> } | null)?.identities ?? [];
+  const looksLikeExistingUser = data.user && identities.length === 0;
+
+  if (looksLikeExistingUser) {
+    redirect(
+      buildPath("/auth/login", {
+        notice: "Ucet s tymto emailom uz existuje. Prihlas sa.",
+      }),
+    );
   }
 
   if (data.user) {
