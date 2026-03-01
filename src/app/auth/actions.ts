@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseAdminClient, hasSupabaseAdminClient } from "@/lib/supabase/admin";
 import { ensureUserBootstrapData } from "@/server/db/user-bootstrap";
 
 function buildPath(pathname: string, query: Record<string, string | undefined>): string {
@@ -134,6 +135,41 @@ export async function signupAction(formData: FormData): Promise<void> {
     }
 
     if (rateLimited) {
+      if (hasSupabaseAdminClient()) {
+        const admin = createSupabaseAdminClient();
+
+        if (admin) {
+          const { data: createdUser, error: adminCreateError } = await admin.auth.admin.createUser({
+            email,
+            password,
+            email_confirm: true,
+          });
+
+          if (!adminCreateError && createdUser.user) {
+            const { data: signedIn, error: signInError } = await supabase.auth.signInWithPassword({
+              email,
+              password,
+            });
+
+            if (!signInError && signedIn.user) {
+              await ensureUserBootstrapData(signedIn.user.id);
+              redirect(
+                buildPath("/", {
+                  notice: "Ucet bol vytvoreny a si prihlaseny.",
+                }),
+              );
+            }
+
+            await ensureUserBootstrapData(createdUser.user.id);
+            redirect(
+              buildPath("/auth/login", {
+                notice: "Ucet bol vytvoreny. Prihlas sa svojim heslom.",
+              }),
+            );
+          }
+        }
+      }
+
       redirect(
         buildPath("/auth/signup", {
           error: "Registracia je docasne obmedzena. Pockaj chvilu a skus to znova.",
@@ -159,16 +195,47 @@ export async function signupAction(formData: FormData): Promise<void> {
     );
   }
 
-  if (data.user) {
-    await ensureUserBootstrapData(data.user.id);
-  }
-
   if (data.session) {
+    if (data.user) {
+      await ensureUserBootstrapData(data.user.id);
+    }
+
     redirect(
       buildPath("/", {
         notice: "Ucet bol vytvoreny a si prihlaseny.",
       }),
     );
+  }
+
+  if (data.user) {
+    const { data: signedIn, error: signInError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (!signInError && signedIn.user) {
+      await ensureUserBootstrapData(signedIn.user.id);
+      redirect(
+        buildPath("/", {
+          notice: "Ucet bol vytvoreny a si prihlaseny.",
+        }),
+      );
+    }
+
+    const signInMessage = signInError?.message?.toLowerCase() ?? "";
+    const needsEmailVerification =
+      signInMessage.includes("email not confirmed") ||
+      signInMessage.includes("email not verified");
+
+    if (needsEmailVerification) {
+      redirect(
+        buildPath("/auth/login", {
+          notice: "Ucet bol vytvoreny. Dokonci overenie cez email a prihlas sa.",
+        }),
+      );
+    }
+
+    await ensureUserBootstrapData(data.user.id);
   }
 
   redirect(
