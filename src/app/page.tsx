@@ -32,8 +32,15 @@ function MetricCard({
   );
 }
 
-export default async function Home() {
+type HomePageProps = {
+  searchParams: Promise<{
+    notice?: string;
+  }>;
+};
+
+export default async function Home({ searchParams }: HomePageProps) {
   const userId = await requireUserId();
+  const params = await searchParams;
 
   const [quotes, clients, catalogItems] = await Promise.all([
     listQuotesWithDetails(userId),
@@ -45,6 +52,7 @@ export default async function Home() {
   const sentQuotes = quotes.filter((quote) => quote.status === "sent").length;
   const acceptedQuotes = quotes.filter((quote) => quote.status === "accepted").length;
   const recentQuotes = quotes.slice(0, 8);
+  const notice = typeof params.notice === "string" ? params.notice : "";
 
   return (
     <AppShell
@@ -60,6 +68,7 @@ export default async function Home() {
         </Link>
       }
     >
+      {notice ? <p className="mb-4 text-sm text-emerald-700">{notice}</p> : null}
       <div className="mb-10 grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard
           label="Ponuky celkom"

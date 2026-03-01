@@ -113,14 +113,30 @@ export async function signupAction(formData: FormData): Promise<void> {
 
   if (error) {
     const normalizedError = error.message.toLowerCase();
+    const errorStatus =
+      typeof (error as { status?: unknown }).status === "number"
+        ? Number((error as { status?: number }).status)
+        : undefined;
     const userExists =
       normalizedError.includes("already registered") ||
       normalizedError.includes("already exists");
+    const rateLimited =
+      errorStatus === 429 ||
+      normalizedError.includes("rate limit") ||
+      normalizedError.includes("too many requests");
 
     if (userExists) {
       redirect(
         buildPath("/auth/login", {
           notice: "Ucet s tymto emailom uz existuje. Prihlas sa.",
+        }),
+      );
+    }
+
+    if (rateLimited) {
+      redirect(
+        buildPath("/auth/signup", {
+          error: "Registracia je docasne obmedzena. Pockaj chvilu a skus to znova.",
         }),
       );
     }
@@ -148,7 +164,11 @@ export async function signupAction(formData: FormData): Promise<void> {
   }
 
   if (data.session) {
-    redirect("/");
+    redirect(
+      buildPath("/", {
+        notice: "Ucet bol vytvoreny a si prihlaseny.",
+      }),
+    );
   }
 
   redirect(

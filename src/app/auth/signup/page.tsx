@@ -5,6 +5,7 @@ import { signupAction } from "@/app/auth/actions";
 type SignupPageProps = {
   searchParams: Promise<{
     error?: string;
+    notice?: string;
   }>;
 };
 
@@ -13,6 +14,7 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
 
   return (
     <div className="space-y-4">
+      {params.notice ? <p className="text-sm text-emerald-700">{params.notice}</p> : null}
       {params.error ? <p className="text-sm text-red-700">{params.error}</p> : null}
 
       <form action={signupAction} className="space-y-3">
