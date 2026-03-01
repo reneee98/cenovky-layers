@@ -1,10 +1,12 @@
 "use server";
 
-import type { QuoteStatus as QuoteStatusEnum } from "@prisma/client";
-import type { Prisma } from "@/types/prisma";
+import type { QuoteStatus as QuoteStatusEnum } from "@/types/domain";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { requireUserId } from "@/lib/auth";
+import { isPrismaKnownRequestError } from "@/lib/prisma-errors";
+import { isQuoteStatus } from "@/lib/quotes/status";
 import {
   createQuote,
   deleteQuote,
@@ -12,8 +14,6 @@ import {
   getSettings,
   setQuoteStatus,
 } from "@/server/repositories";
-import { isPrismaKnownRequestError } from "@/lib/prisma-errors";
-import { isQuoteStatus } from "@/lib/quotes/status";
 import { reserveNextQuoteNumber } from "@/server/quotes/numbering";
 
 type QuoteStatus = QuoteStatusEnum;
@@ -33,13 +33,15 @@ function buildQuoteBuilderUrl(quoteId: string, query?: Record<string, string>): 
   return `/quotes/${quoteId}?${params.toString()}`;
 }
 
-async function duplicateQuoteWithNewNumber(quoteId: string) {
-  await getSettings();
-  const nextNumber = await reserveNextQuoteNumber();
-  return duplicateQuote(quoteId, nextNumber);
+async function duplicateQuoteWithNewNumber(userId: string, quoteId: string) {
+  await getSettings(userId);
+  const nextNumber = await reserveNextQuoteNumber(userId);
+  return duplicateQuote(userId, quoteId, nextNumber);
 }
 
 export async function createDraftQuoteAction(formData: FormData): Promise<void> {
+  const userId = await requireUserId();
+
   const clientIdEntry = formData.get("client_id");
   const clientId =
     typeof clientIdEntry === "string" && clientIdEntry.trim().length > 0
@@ -53,8 +55,8 @@ export async function createDraftQuoteAction(formData: FormData): Promise<void> 
   const titleEntry = formData.get("title");
   const title = typeof titleEntry === "string" ? titleEntry.trim() : "";
 
-  const settings = await getSettings();
-  const number = await reserveNextQuoteNumber();
+  const settings = await getSettings(userId);
+  const number = await reserveNextQuoteNumber(userId);
 
   const validUntil = new Date();
   validUntil.setDate(validUntil.getDate() + 14);
@@ -66,7 +68,7 @@ export async function createDraftQuoteAction(formData: FormData): Promise<void> 
   const termsContentMarkdown = "";
 
   try {
-    const quote = await createQuote({
+    const quote = await createQuote(userId, {
       number,
       title: title || `Ponuka ${number}`,
       status: "draft",
@@ -97,6 +99,8 @@ export async function createDraftQuoteAction(formData: FormData): Promise<void> 
 }
 
 export async function changeQuoteStatusAction(formData: FormData): Promise<void> {
+  const userId = await requireUserId();
+
   const quoteIdEntry = formData.get("quote_id");
   const quoteId =
     typeof quoteIdEntry === "string" && quoteIdEntry.trim().length > 0
@@ -114,7 +118,7 @@ export async function changeQuoteStatusAction(formData: FormData): Promise<void>
   }
 
   try {
-    await setQuoteStatus(quoteId, status);
+    await setQuoteStatus(userId, quoteId, status);
   } catch (error) {
     if (isPrismaKnownRequestError(error, "P2025")) {
       redirect(buildQuotesUrl({ error: "Ponuka nebola najdena." }));
@@ -130,6 +134,8 @@ export async function changeQuoteStatusAction(formData: FormData): Promise<void>
 }
 
 export async function duplicateQuoteAction(formData: FormData): Promise<void> {
+  const userId = await requireUserId();
+
   const quoteIdEntry = formData.get("quote_id");
   const quoteId =
     typeof quoteIdEntry === "string" && quoteIdEntry.trim().length > 0
@@ -141,7 +147,7 @@ export async function duplicateQuoteAction(formData: FormData): Promise<void> {
   }
 
   try {
-    await duplicateQuoteWithNewNumber(quoteId);
+    await duplicateQuoteWithNewNumber(userId, quoteId);
   } catch (error) {
     if (isPrismaKnownRequestError(error, "P2025")) {
       redirect(buildQuotesUrl({ error: "Ponuka nebola najdena." }));
@@ -155,6 +161,8 @@ export async function duplicateQuoteAction(formData: FormData): Promise<void> {
 }
 
 export async function duplicateQuoteToBuilderAction(formData: FormData): Promise<void> {
+  const userId = await requireUserId();
+
   const quoteIdEntry = formData.get("quote_id");
   const quoteId =
     typeof quoteIdEntry === "string" && quoteIdEntry.trim().length > 0
@@ -166,7 +174,7 @@ export async function duplicateQuoteToBuilderAction(formData: FormData): Promise
   }
 
   try {
-    const duplicated = await duplicateQuoteWithNewNumber(quoteId);
+    const duplicated = await duplicateQuoteWithNewNumber(userId, quoteId);
 
     revalidatePath("/quotes");
     revalidatePath(buildQuoteBuilderUrl(duplicated.id));
@@ -182,6 +190,8 @@ export async function duplicateQuoteToBuilderAction(formData: FormData): Promise
 }
 
 export async function deleteQuoteAction(formData: FormData): Promise<void> {
+  const userId = await requireUserId();
+
   const quoteIdEntry = formData.get("quote_id");
   const quoteId =
     typeof quoteIdEntry === "string" && quoteIdEntry.trim().length > 0
@@ -193,7 +203,7 @@ export async function deleteQuoteAction(formData: FormData): Promise<void> {
   }
 
   try {
-    await deleteQuote(quoteId);
+    await deleteQuote(userId, quoteId);
   } catch (error) {
     if (isPrismaKnownRequestError(error, "P2025")) {
       redirect(buildQuotesUrl({ error: "Ponuka nebola najdena." }));

@@ -1,6 +1,6 @@
 "use client";
 
-import type { Unit } from "@prisma/client";
+import type { Unit } from "@/types/domain";
 import { useMemo, useState } from "react";
 import { Check, Plus } from "lucide-react";
 

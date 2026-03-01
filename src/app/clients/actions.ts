@@ -1,9 +1,9 @@
 "use server";
 
-import type { Prisma } from "@/types/prisma";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { requireUserId } from "@/lib/auth";
 import {
   createClient,
   deleteClient,
@@ -64,6 +64,7 @@ export async function saveClientAction(
   _previousState: ClientFormActionState,
   formData: FormData,
 ): Promise<ClientFormActionState> {
+  const userId = await requireUserId();
   const errors: ClientFormFieldErrors = {};
 
   const clientIdEntry = formData.get("client_id");
@@ -110,7 +111,7 @@ export async function saveClientAction(
 
   try {
     if (clientId) {
-      await updateClient(clientId, {
+      await updateClient(userId, clientId, {
         type,
         name,
         billingAddressLine1,
@@ -126,7 +127,7 @@ export async function saveClientAction(
         contactPhone,
       });
     } else {
-      await createClient({
+      await createClient(userId, {
         type,
         name,
         billingAddressLine1,
@@ -163,6 +164,7 @@ export async function saveClientAction(
 }
 
 export async function deleteClientAction(formData: FormData): Promise<void> {
+  const userId = await requireUserId();
   const clientIdEntry = formData.get("client_id");
   const clientId =
     typeof clientIdEntry === "string" && clientIdEntry.trim().length > 0
@@ -174,7 +176,7 @@ export async function deleteClientAction(formData: FormData): Promise<void> {
   }
 
   try {
-    await deleteClient(clientId);
+    await deleteClient(userId, clientId);
   } catch (error) {
     if (isPrismaKnownRequestError(error, "P2003")) {
       redirect(

@@ -10,6 +10,8 @@ import {
   Users,
 } from "lucide-react";
 import type { ReactNode } from "react";
+import { logoutAction } from "@/app/auth/actions";
+import { getOptionalUser } from "@/lib/auth";
 
 const NAV_ITEMS = [
   {
@@ -61,6 +63,7 @@ type AppShellProps = {
 
 type NavigationProps = {
   active: NavigationKey;
+  userEmail: string;
 };
 
 type NavigationItem = (typeof NAV_ITEMS)[number];
@@ -96,7 +99,7 @@ function NavigationLink({ item, isActive }: NavigationLinkProps) {
   );
 }
 
-function Navigation({ active }: NavigationProps) {
+function Navigation({ active, userEmail }: NavigationProps) {
   return (
     <nav aria-label="Hlavna navigacia" className="flex h-full flex-col">
       <div className="px-4 pb-2 pt-4">
@@ -134,19 +137,27 @@ function Navigation({ active }: NavigationProps) {
       <div className="mt-auto border-t border-slate-100 bg-slate-50/30 p-4">
         <div className="flex items-center gap-3 rounded-xl border border-transparent p-2 transition-all hover:border-slate-200 hover:bg-white hover:shadow-sm">
           <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-gradient-to-br from-slate-100 to-slate-200 text-xs font-bold text-slate-600">
-            N
+            {userEmail.slice(0, 1).toUpperCase()}
           </span>
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-slate-700">Norbert</p>
-            <p className="truncate text-xs text-slate-400">norbert@fokus.sk</p>
+            <p className="truncate text-sm font-semibold text-slate-700">Prihlaseny pouzivatel</p>
+            <p className="truncate text-xs text-slate-400">{userEmail}</p>
           </div>
         </div>
+        <form action={logoutAction} className="mt-2">
+          <button
+            type="submit"
+            className="inline-flex w-full items-center justify-center rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600 transition hover:bg-white"
+          >
+            Odhlasit sa
+          </button>
+        </form>
       </div>
     </nav>
   );
 }
 
-export function AppShell({
+export async function AppShell({
   active,
   title,
   description,
@@ -154,6 +165,8 @@ export function AppShell({
   children,
 }: AppShellProps) {
   const drawerId = "app-nav-drawer";
+  const user = await getOptionalUser();
+  const userEmail = user?.email?.trim() || "no-email";
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
@@ -198,7 +211,7 @@ export function AppShell({
             Zavriet
           </label>
         </div>
-        <Navigation active={active} />
+        <Navigation active={active} userEmail={userEmail} />
       </aside>
 
       <main className="lg:ml-64">

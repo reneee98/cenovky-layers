@@ -3,6 +3,7 @@ import Link from "next/link";
 import { deleteClientAction } from "@/app/clients/actions";
 import { DeleteClientButton } from "@/app/clients/delete-client-button";
 import { AppShell } from "@/components/app-shell";
+import { requireUserId } from "@/lib/auth";
 import {
   Button,
   IconActionLink,
@@ -24,11 +25,12 @@ type ClientsPageProps = {
 };
 
 export default async function ClientsPage({ searchParams }: ClientsPageProps) {
+  const userId = await requireUserId();
   const params = await searchParams;
   const search = params.search?.trim() ?? "";
   const icoFilter = params.ico?.trim() ?? "";
 
-  const baseClients = await listClients({ search });
+  const baseClients = await listClients(userId, { search });
   const clients = baseClients.filter((client) => {
     if (icoFilter === "with") {
       return Boolean(client.ico?.trim());

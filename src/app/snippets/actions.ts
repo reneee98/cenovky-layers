@@ -1,13 +1,10 @@
 "use server";
 
-import type {
-  Language as SnippetLanguage,
-  SnippetType as SnippetKind,
-} from "@prisma/client";
-import type { Prisma } from "@/types/prisma";
+import type { Language as SnippetLanguage, SnippetType as SnippetKind } from "@/types/domain";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { requireUserId } from "@/lib/auth";
 import { isPrismaKnownRequestError } from "@/lib/prisma-errors";
 import { createSnippet, deleteSnippet, updateSnippet } from "@/server/repositories";
 
@@ -48,6 +45,7 @@ export async function saveSnippetAction(
   _previousState: SnippetFormActionState,
   formData: FormData,
 ): Promise<SnippetFormActionState> {
+  const userId = await requireUserId();
   const errors: SnippetFormFieldErrors = {};
 
   const snippetIdEntry = formData.get("snippet_id");
@@ -89,14 +87,14 @@ export async function saveSnippetAction(
 
   try {
     if (snippetId) {
-      await updateSnippet(snippetId, {
+      await updateSnippet(userId, snippetId, {
         type,
         language,
         title,
         contentMarkdown,
       });
     } else {
-      await createSnippet({
+      await createSnippet(userId, {
         type,
         language,
         title,
@@ -125,6 +123,7 @@ export async function saveSnippetAction(
 }
 
 export async function deleteSnippetAction(formData: FormData): Promise<void> {
+  const userId = await requireUserId();
   const snippetIdEntry = formData.get("snippet_id");
   const snippetId =
     typeof snippetIdEntry === "string" && snippetIdEntry.trim().length > 0
@@ -136,7 +135,7 @@ export async function deleteSnippetAction(formData: FormData): Promise<void> {
   }
 
   try {
-    await deleteSnippet(snippetId);
+    await deleteSnippet(userId, snippetId);
   } catch (error) {
     if (isPrismaKnownRequestError(error, "P2025")) {
       redirect(buildSnippetsUrl({ error: "Sablona nebola najdena." }));

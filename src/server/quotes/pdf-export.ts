@@ -247,9 +247,13 @@ async function loadLogoImageFromSettings(logoUrl: string | null): Promise<Snapsh
 }
 
 export async function exportQuoteToPdfVersion(
+  userId: string,
   quoteId: string,
 ): Promise<ExportQuotePdfVersionResult | null> {
-  const [quote, settings] = await Promise.all([getQuoteWithRelations(quoteId), getSettings()]);
+  const [quote, settings] = await Promise.all([
+    getQuoteWithRelations(userId, quoteId),
+    getSettings(userId),
+  ]);
 
   if (!quote) {
     return null;
@@ -261,6 +265,7 @@ export async function exportQuoteToPdfVersion(
   const pdfBytes = await renderQuotePdf(snapshot);
 
   const createdVersion = await createOrReplaceSingleQuoteVersion(
+    userId,
     quote.id,
     snapshot as Prisma.InputJsonValue,
     "__pending__",
@@ -271,7 +276,7 @@ export async function exportQuoteToPdfVersion(
     createdVersion.id,
   );
 
-  await updateQuoteVersionPdfFileUrl(createdVersion.id, pdfFileReference);
+  await updateQuoteVersionPdfFileUrl(userId, createdVersion.id, pdfFileReference);
   await saveQuoteVersionPdf(pdfFileReference, pdfBytes);
 
   return {
@@ -283,9 +288,13 @@ export async function exportQuoteToPdfVersion(
 }
 
 export async function getCurrentQuotePdfDownloadPayload(
+  userId: string,
   quoteId: string,
 ): Promise<QuoteCurrentDownloadPayload | null> {
-  const [quote, settings] = await Promise.all([getQuoteWithRelations(quoteId), getSettings()]);
+  const [quote, settings] = await Promise.all([
+    getQuoteWithRelations(userId, quoteId),
+    getSettings(userId),
+  ]);
 
   if (!quote) {
     return null;
@@ -304,9 +313,10 @@ export async function getCurrentQuotePdfDownloadPayload(
 }
 
 export async function getQuoteVersionDownloadPayload(
+  userId: string,
   versionId: string,
 ): Promise<QuoteVersionDownloadPayload | null> {
-  const version = await getQuoteVersionById(versionId);
+  const version = await getQuoteVersionById(userId, versionId);
 
   if (!version) {
     return null;
@@ -317,7 +327,7 @@ export async function getQuoteVersionDownloadPayload(
 
   if (!pdfReference) {
     pdfReference = buildQuoteVersionPdfReference(version.quoteId, version.versionNumber, version.id);
-    await updateQuoteVersionPdfFileUrl(version.id, pdfReference);
+    await updateQuoteVersionPdfFileUrl(userId, version.id, pdfReference);
   }
 
   const storedPdfBytes = await readQuoteVersionPdf(pdfReference);

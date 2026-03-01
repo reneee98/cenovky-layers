@@ -1,6 +1,5 @@
-import type { QuoteStatus as QuoteStatusEnum } from "@prisma/client";
+import type { QuoteStatus as QuoteStatusEnum } from "@/types/domain";
 import Link from "next/link";
-import type { Prisma } from "@/types/prisma";
 
 import {
   changeQuoteStatusAction,
@@ -9,6 +8,7 @@ import {
 } from "@/app/quotes/actions";
 import { DeleteQuoteButton } from "@/app/quotes/delete-quote-button";
 import { AppShell } from "@/components/app-shell";
+import { requireUserId } from "@/lib/auth";
 import {
   Badge,
   Button,
@@ -93,6 +93,7 @@ type QuotesPageProps = {
 };
 
 export default async function QuotesPage({ searchParams }: QuotesPageProps) {
+  const userId = await requireUserId();
   const params = await searchParams;
 
   const status = isQuoteStatus(params.status) ? (params.status as QuoteStatus) : undefined;
@@ -106,7 +107,7 @@ export default async function QuotesPage({ searchParams }: QuotesPageProps) {
   );
 
   const [quotes, clients, currencies] = await Promise.all([
-    listQuotesWithDetails({
+    listQuotesWithDetails(userId, {
       status,
       clientId,
       currency,
@@ -114,8 +115,8 @@ export default async function QuotesPage({ searchParams }: QuotesPageProps) {
       dateTo,
       search,
     }),
-    listClients(),
-    listQuoteCurrencies(),
+    listClients(userId),
+    listQuoteCurrencies(userId),
   ]);
 
   return (

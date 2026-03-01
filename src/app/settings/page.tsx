@@ -1,9 +1,11 @@
 import { SettingsForm } from "@/app/settings/settings-form";
 import { AppShell } from "@/components/app-shell";
+import { requireUserId } from "@/lib/auth";
 import { getSettings } from "@/server/repositories";
 
 export default async function SettingsPage() {
-  const settings = await getSettings();
+  const userId = await requireUserId();
+  const settings = await getSettings(userId);
   const currentYear = new Date().getFullYear();
 
   return (

@@ -1,26 +1,28 @@
 import { prisma } from "@/lib/prisma";
-import { SETTINGS_SINGLETON_ID } from "@/server/db/settings-defaults";
 
 function formatQuoteNumber(year: number, counter: number): string {
   return `${year}-${String(counter).padStart(3, "0")}`;
 }
 
-export async function reserveNextQuoteNumber(): Promise<string> {
+export async function reserveNextQuoteNumber(userId: string): Promise<string> {
   return prisma.$transaction(async (tx) => {
     const settings = await tx.settings.findUnique({
-      where: { id: SETTINGS_SINGLETON_ID },
+      where: { userId },
     });
 
     if (!settings) {
-      throw new Error("Settings are not initialized.");
+      throw new Error("Settings are not initialized for the current user.");
     }
 
     let nextCounter = settings.numberingCounter + 1;
     let quoteNumber = formatQuoteNumber(settings.numberingYear, nextCounter);
 
     for (;;) {
-      const existing = await tx.quote.findUnique({
-        where: { number: quoteNumber },
+      const existing = await tx.quote.findFirst({
+        where: {
+          userId,
+          number: quoteNumber,
+        },
         select: { id: true },
       });
 
@@ -33,7 +35,7 @@ export async function reserveNextQuoteNumber(): Promise<string> {
     }
 
     await tx.settings.update({
-      where: { id: SETTINGS_SINGLETON_ID },
+      where: { userId },
       data: {
         numberingCounter: nextCounter,
       },

@@ -60,6 +60,11 @@ if (!rawConnectionString) {
   );
 }
 
+const seedUserId = process.env.SEED_USER_ID;
+if (!seedUserId) {
+  throw new Error("Missing SEED_USER_ID. Provide Supabase auth user ID to initialize settings.");
+}
+
 const connectionString = normalizeConnectionString(rawConnectionString);
 const adapter = new PrismaPg({
   connectionString,
@@ -68,10 +73,8 @@ const adapter = new PrismaPg({
 
 const prisma = new PrismaClient({ adapter });
 
-const SETTINGS_SINGLETON_ID = 1;
-
 const defaults = {
-  id: SETTINGS_SINGLETON_ID,
+  userId: seedUserId,
   companyName: "Your Company",
   companyAddress: "Street 1, City",
   companyEmail: "hello@example.com",
@@ -84,24 +87,14 @@ const defaults = {
 };
 
 async function main() {
-  const settings = await prisma.$transaction(async (tx) => {
-    await tx.settings.deleteMany({
-      where: {
-        id: {
-          not: SETTINGS_SINGLETON_ID,
-        },
-      },
-    });
-
-    return tx.settings.upsert({
-      where: { id: SETTINGS_SINGLETON_ID },
-      update: {},
-      create: defaults,
-    });
+  const settings = await prisma.settings.upsert({
+    where: { userId: seedUserId },
+    update: {},
+    create: defaults,
   });
 
   console.log("Settings initialized", {
-    id: settings.id,
+    userId: settings.userId,
     defaultLanguage: settings.defaultLanguage,
     defaultCurrency: settings.defaultCurrency,
     vatRate: settings.vatRate.toString(),

@@ -1,10 +1,4 @@
-import type {
-  Language as QuoteLanguage,
-  QuoteStatus as QuoteStatusEnum,
-  TotalDiscountType as QuoteDiscountType,
-  Unit as QuoteUnit,
-} from "@prisma/client";
-import type { Prisma } from "@/types/prisma";
+import type { Language as QuoteLanguage, QuoteStatus as QuoteStatusEnum, TotalDiscountType as QuoteDiscountType, Unit as QuoteUnit } from "@/types/domain";
 
 type Language = QuoteLanguage;
 type QuoteStatus = QuoteStatusEnum;

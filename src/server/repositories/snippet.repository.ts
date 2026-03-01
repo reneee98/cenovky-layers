@@ -1,14 +1,7 @@
-import { Snippet } from "@prisma/client";
-import type {
-  Language as SnippetLanguage,
-  SnippetType as SnippetKind,
-} from "@prisma/client";
+import type { Language, SnippetType } from "@/types/domain";
 import type { Prisma } from "@/types/prisma";
 
 import { prisma } from "@/lib/prisma";
-
-type Language = SnippetLanguage;
-type SnippetType = SnippetKind;
 
 export type ListSnippetFilters = {
   type?: SnippetType;
@@ -16,9 +9,10 @@ export type ListSnippetFilters = {
 };
 
 export async function listSnippets(
+  userId: string,
   filters: ListSnippetFilters = {},
-): Promise<Snippet[]> {
-  const where: Prisma.SnippetWhereInput = {};
+) {
+  const where: Prisma.SnippetWhereInput = { userId };
 
   if (filters.type) {
     where.type = filters.type;
@@ -34,26 +28,52 @@ export async function listSnippets(
   });
 }
 
-export async function getSnippetById(id: string): Promise<Snippet | null> {
-  return prisma.snippet.findUnique({ where: { id } });
+export async function getSnippetById(userId: string, id: string) {
+  return prisma.snippet.findUnique({
+    where: {
+      id_userId: {
+        id,
+        userId,
+      },
+    },
+  });
 }
 
 export async function createSnippet(
+  userId: string,
   data: Prisma.SnippetUncheckedCreateInput,
-): Promise<Snippet> {
-  return prisma.snippet.create({ data });
+) {
+  return prisma.snippet.create({
+    data: {
+      ...data,
+      userId,
+    },
+  });
 }
 
 export async function updateSnippet(
+  userId: string,
   id: string,
   data: Prisma.SnippetUpdateInput,
-): Promise<Snippet> {
+) {
   return prisma.snippet.update({
-    where: { id },
+    where: {
+      id_userId: {
+        id,
+        userId,
+      },
+    },
     data,
   });
 }
 
-export async function deleteSnippet(id: string): Promise<Snippet> {
-  return prisma.snippet.delete({ where: { id } });
+export async function deleteSnippet(userId: string, id: string) {
+  return prisma.snippet.delete({
+    where: {
+      id_userId: {
+        id,
+        userId,
+      },
+    },
+  });
 }

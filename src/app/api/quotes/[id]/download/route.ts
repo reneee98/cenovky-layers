@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getCurrentQuotePdfDownloadPayload } from "@/server/quotes/pdf-export";
 
 export const runtime = "nodejs";
@@ -8,9 +9,18 @@ export async function GET(
   _request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return NextResponse.json({ error: "Neautorizovane." }, { status: 401 });
+  }
+
   const { id } = await context.params;
   try {
-    const payload = await getCurrentQuotePdfDownloadPayload(id);
+    const payload = await getCurrentQuotePdfDownloadPayload(user.id, id);
 
     if (!payload) {
       return NextResponse.json({ error: "Ponuka nebola najdena." }, { status: 404 });
@@ -26,6 +36,7 @@ export async function GET(
   } catch (error) {
     console.error("Quote PDF download failed", {
       quoteId: id,
+      userId: user.id,
       error: error instanceof Error ? error.message : String(error),
     });
     return NextResponse.json({ error: "Nepodarilo sa vygenerovat PDF." }, { status: 500 });

@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { createDraftQuoteAction } from "@/app/quotes/actions";
 import { AppShell } from "@/components/app-shell";
+import { requireUserId } from "@/lib/auth";
 import { listClients } from "@/server/repositories";
 
 type NewQuotePageProps = {
@@ -11,8 +12,9 @@ type NewQuotePageProps = {
 };
 
 export default async function NewQuotePage({ searchParams }: NewQuotePageProps) {
+  const userId = await requireUserId();
   const params = await searchParams;
-  const clients = await listClients();
+  const clients = await listClients(userId);
 
   return (
     <AppShell

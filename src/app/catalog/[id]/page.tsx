@@ -3,6 +3,7 @@ import type { Prisma } from "@/types/prisma";
 
 import { CatalogForm } from "@/app/catalog/catalog-form";
 import { AppShell } from "@/components/app-shell";
+import { requireUserId } from "@/lib/auth";
 import { getCatalogItemById } from "@/server/repositories";
 
 function extractTags(tagsValue: Prisma.JsonValue): string[] {
@@ -20,8 +21,9 @@ type EditCatalogItemPageProps = {
 };
 
 export default async function EditCatalogItemPage({ params }: EditCatalogItemPageProps) {
+  const userId = await requireUserId();
   const { id } = await params;
-  const item = await getCatalogItemById(id);
+  const item = await getCatalogItemById(userId, id);
 
   if (!item) {
     notFound();

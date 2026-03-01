@@ -1,22 +1,10 @@
-import { Settings } from "@prisma/client";
-
 import { prisma } from "@/lib/prisma";
+import { buildDefaultSettingsCreateInput } from "@/server/db/settings-defaults";
 
-import {
-  buildDefaultSettingsCreateInput,
-  SETTINGS_SINGLETON_ID,
-} from "@/server/db/settings-defaults";
-
-export async function ensureSettingsSingleton(): Promise<Settings> {
-  const existing = await prisma.settings.findUnique({
-    where: { id: SETTINGS_SINGLETON_ID },
-  });
-
-  if (existing) {
-    return existing;
-  }
-
-  return prisma.settings.create({
-    data: buildDefaultSettingsCreateInput(),
+export async function ensureSettingsForUser(userId: string) {
+  return prisma.settings.upsert({
+    where: { userId },
+    update: {},
+    create: buildDefaultSettingsCreateInput(userId),
   });
 }

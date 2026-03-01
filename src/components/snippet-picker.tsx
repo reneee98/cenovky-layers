@@ -1,6 +1,6 @@
 "use client";
 
-import type { Language, SnippetType } from "@prisma/client";
+import type { Language, SnippetType } from "@/types/domain";
 import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";

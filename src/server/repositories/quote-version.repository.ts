@@ -1,35 +1,55 @@
-import { QuoteVersion } from "@prisma/client";
 import type { Prisma } from "@/types/prisma";
 
 import { prisma } from "@/lib/prisma";
 
-export async function listQuoteVersions(quoteId: string): Promise<QuoteVersion[]> {
+export async function listQuoteVersions(userId: string, quoteId: string) {
   return prisma.quoteVersion.findMany({
-    where: { quoteId },
+    where: {
+      userId,
+      quoteId,
+    },
     orderBy: [{ versionNumber: "desc" }],
   });
 }
 
 export async function getQuoteVersionById(
+  userId: string,
   id: string,
-): Promise<QuoteVersion | null> {
-  return prisma.quoteVersion.findUnique({ where: { id } });
+) {
+  return prisma.quoteVersion.findUnique({
+    where: {
+      id_userId: {
+        id,
+        userId,
+      },
+    },
+  });
 }
 
 export async function createQuoteVersion(
+  userId: string,
   data: Prisma.QuoteVersionUncheckedCreateInput,
-): Promise<QuoteVersion> {
-  return prisma.quoteVersion.create({ data });
+) {
+  return prisma.quoteVersion.create({
+    data: {
+      ...data,
+      userId,
+    },
+  });
 }
 
 export async function createNextQuoteVersion(
+  userId: string,
   quoteId: string,
   snapshotJson: Prisma.InputJsonValue,
   pdfFileUrl: string,
-): Promise<QuoteVersion> {
+) {
   return prisma.$transaction(async (tx) => {
     const latestVersion = await tx.quoteVersion.findFirst({
-      where: { quoteId },
+      where: {
+        userId,
+        quoteId,
+      },
       orderBy: [{ versionNumber: "desc" }],
       select: { versionNumber: true },
     });
@@ -38,6 +58,7 @@ export async function createNextQuoteVersion(
 
     return tx.quoteVersion.create({
       data: {
+        userId,
         quoteId,
         versionNumber: nextVersionNumber,
         snapshotJson,
@@ -48,13 +69,17 @@ export async function createNextQuoteVersion(
 }
 
 export async function createOrReplaceSingleQuoteVersion(
+  userId: string,
   quoteId: string,
   snapshotJson: Prisma.InputJsonValue,
   pdfFileUrl: string,
-): Promise<QuoteVersion> {
+) {
   return prisma.$transaction(async (tx) => {
     const existingVersion = await tx.quoteVersion.findFirst({
-      where: { quoteId },
+      where: {
+        userId,
+        quoteId,
+      },
       orderBy: [{ exportedAt: "desc" }],
       select: { id: true },
     });
@@ -62,6 +87,7 @@ export async function createOrReplaceSingleQuoteVersion(
     if (!existingVersion) {
       return tx.quoteVersion.create({
         data: {
+          userId,
           quoteId,
           versionNumber: 1,
           snapshotJson,
@@ -72,13 +98,19 @@ export async function createOrReplaceSingleQuoteVersion(
 
     await tx.quoteVersion.deleteMany({
       where: {
+        userId,
         quoteId,
         id: { not: existingVersion.id },
       },
     });
 
     return tx.quoteVersion.update({
-      where: { id: existingVersion.id },
+      where: {
+        id_userId: {
+          id: existingVersion.id,
+          userId,
+        },
+      },
       data: {
         versionNumber: 1,
         snapshotJson,
@@ -90,11 +122,17 @@ export async function createOrReplaceSingleQuoteVersion(
 }
 
 export async function updateQuoteVersionPdfFileUrl(
+  userId: string,
   id: string,
   pdfFileUrl: string,
-): Promise<QuoteVersion> {
+) {
   return prisma.quoteVersion.update({
-    where: { id },
+    where: {
+      id_userId: {
+        id,
+        userId,
+      },
+    },
     data: { pdfFileUrl },
   });
 }

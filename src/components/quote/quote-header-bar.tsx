@@ -1,6 +1,6 @@
 "use client";
 
-import type { Language } from "@prisma/client";
+import type { Language } from "@/types/domain";
 
 import { AutosaveIndicator, type AutosaveState } from "@/components/quote/autosave-indicator";
 import {

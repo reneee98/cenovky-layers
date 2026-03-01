@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 
 import { SnippetForm } from "@/app/snippets/snippet-form";
 import { AppShell } from "@/components/app-shell";
+import { requireUserId } from "@/lib/auth";
 import { getSnippetById } from "@/server/repositories";
 
 type EditSnippetPageProps = {
@@ -11,8 +12,9 @@ type EditSnippetPageProps = {
 };
 
 export default async function EditSnippetPage({ params }: EditSnippetPageProps) {
+  const userId = await requireUserId();
   const { id } = await params;
-  const snippet = await getSnippetById(id);
+  const snippet = await getSnippetById(userId, id);
 
   if (!snippet) {
     notFound();

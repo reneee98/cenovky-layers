@@ -4,6 +4,7 @@ import type { Prisma } from "@/types/prisma";
 import { deleteCatalogItemAction } from "@/app/catalog/actions";
 import { DeleteCatalogItemButton } from "@/app/catalog/delete-catalog-item-button";
 import { AppShell } from "@/components/app-shell";
+import { requireUserId } from "@/lib/auth";
 import {
   Button,
   IconActionLink,
@@ -35,6 +36,7 @@ type CatalogPageProps = {
 };
 
 export default async function CatalogPage({ searchParams }: CatalogPageProps) {
+  const userId = await requireUserId();
   const params = await searchParams;
 
   const search = params.search?.trim() ?? "";
@@ -43,8 +45,8 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
   const hasFilters = Boolean(search || category || tag);
 
   const [items, facets] = await Promise.all([
-    listCatalogItems({ search, category, tag }),
-    listCatalogFacets(),
+    listCatalogItems(userId, { search, category, tag }),
+    listCatalogFacets(userId),
   ]);
 
   return (

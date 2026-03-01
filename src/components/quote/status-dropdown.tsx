@@ -1,6 +1,6 @@
 "use client";
 
-import type { QuoteStatus } from "@prisma/client";
+import type { QuoteStatus } from "@/types/domain";
 import { Check, ChevronDown } from "lucide-react";
 
 import {

@@ -4,10 +4,10 @@ import { randomUUID } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import { extname, join } from "node:path";
 
-import type { Language as SettingsLanguage } from "@prisma/client";
-import type { Prisma } from "@/types/prisma";
+import type { Language as SettingsLanguage } from "@/types/domain";
 import { revalidatePath } from "next/cache";
 
+import { requireUserId } from "@/lib/auth";
 import { getSettings, updateSettings } from "@/server/repositories";
 
 type Language = SettingsLanguage;
@@ -98,6 +98,7 @@ export async function saveSettingsAction(
   _previousState: SettingsActionState,
   formData: FormData,
 ): Promise<SettingsActionState> {
+  const userId = await requireUserId();
   const errors: SettingsFormFieldErrors = {};
 
   const companyName = readRequiredString(formData, "company_name", errors);
@@ -180,7 +181,7 @@ export async function saveSettingsAction(
     };
   }
 
-  await updateSettings({
+  await updateSettings(userId, {
     companyName,
     companyAddress,
     companyIco,
@@ -210,7 +211,8 @@ export async function resetNumberingForNewYearAction(
 ): Promise<SettingsActionState> {
   void previousState;
 
-  const settings = await getSettings();
+  const userId = await requireUserId();
+  const settings = await getSettings(userId);
   const currentYear = new Date().getFullYear();
 
   if (settings.numberingYear === currentYear) {
@@ -220,7 +222,7 @@ export async function resetNumberingForNewYearAction(
     };
   }
 
-  await updateSettings({
+  await updateSettings(userId, {
     numberingYear: currentYear,
     numberingCounter: 0,
   });

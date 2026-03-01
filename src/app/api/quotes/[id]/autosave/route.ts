@@ -1,13 +1,9 @@
-import type {
-  Language as QuoteLanguage,
-  QuoteStatus as QuoteStatusEnum,
-  TotalDiscountType as QuoteDiscountType,
-  Unit as QuoteUnit,
-} from "@prisma/client";
-import type { Prisma } from "@/types/prisma";
+import type { Language as QuoteLanguage, QuoteStatus as QuoteStatusEnum, TotalDiscountType as QuoteDiscountType, Unit as QuoteUnit } from "@/types/domain";
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { isPrismaKnownRequestError } from "@/lib/prisma-errors";
 import { QUOTE_ITEM_SECTION_MARKER } from "@/lib/quotes/items";
 import { isQuoteStatus } from "@/lib/quotes/status";
 import { prisma } from "@/lib/prisma";
@@ -196,6 +192,16 @@ export async function PATCH(
   request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return NextResponse.json({ error: "Neautorizovane." }, { status: 401 });
+  }
+
+  const userId = user.id;
   const { id } = await context.params;
 
   const payloadJson = await request.json();
@@ -231,8 +237,27 @@ export async function PATCH(
 
   try {
     const updatedQuote = await prisma.$transaction(async (tx) => {
+      const ownedClient = await tx.client.findUnique({
+        where: {
+          id_userId: {
+            id: payload.clientId,
+            userId,
+          },
+        },
+        select: { id: true },
+      });
+
+      if (!ownedClient) {
+        throw new Error("CLIENT_NOT_FOUND");
+      }
+
       const updated = await tx.quote.update({
-        where: { id },
+        where: {
+          id_userId: {
+            id,
+            userId,
+          },
+        },
         data: {
           title: payload.title.trim(),
           clientId: payload.clientId,
@@ -252,12 +277,23 @@ export async function PATCH(
         },
       });
 
-      await tx.quoteItem.deleteMany({ where: { quoteId: id } });
-      await tx.scopeItem.deleteMany({ where: { quoteId: id } });
+      await tx.quoteItem.deleteMany({
+        where: {
+          userId,
+          quoteId: id,
+        },
+      });
+      await tx.scopeItem.deleteMany({
+        where: {
+          userId,
+          quoteId: id,
+        },
+      });
 
       if (items.length > 0) {
         await tx.quoteItem.createMany({
           data: items.map((item, index) => ({
+            userId,
             quoteId: id,
             name: item.name,
             description: item.description,
@@ -273,6 +309,7 @@ export async function PATCH(
       if (payload.scopeItems.length > 0) {
         await tx.scopeItem.createMany({
           data: payload.scopeItems.map((scopeItem, index) => ({
+            userId,
             quoteId: id,
             category: scopeItem.category,
             itemKey: scopeItem.itemKey,
@@ -294,7 +331,18 @@ export async function PATCH(
       updatedAt: updatedQuote.updatedAt.toISOString(),
     });
   } catch (error) {
-    console.error("Quote autosave failed", { quoteId: id, error });
+    if (error instanceof Error && error.message === "CLIENT_NOT_FOUND") {
+      return NextResponse.json(
+        { error: "Vybrany klient nepatri prihlasenemu pouzivatelovi." },
+        { status: 400 },
+      );
+    }
+
+    if (isPrismaKnownRequestError(error, "P2025")) {
+      return NextResponse.json({ error: "Ponuka nebola najdena." }, { status: 404 });
+    }
+
+    console.error("Quote autosave failed", { quoteId: id, userId, error });
     return NextResponse.json(
       {
         error: "Nepodarilo sa automaticky ulozit ponuku.",

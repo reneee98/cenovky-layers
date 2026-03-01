@@ -1,6 +1,6 @@
 "use client";
 
-import type { Language, QuoteStatus, TotalDiscountType } from "@prisma/client";
+import type { Language, QuoteStatus, TotalDiscountType } from "@/types/domain";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { ChevronUp, FileDown } from "lucide-react";
 import { toast } from "sonner";

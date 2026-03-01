@@ -1,4 +1,3 @@
-import { CatalogItem } from "@prisma/client";
 import type { Prisma } from "@/types/prisma";
 
 import { prisma } from "@/lib/prisma";
@@ -20,9 +19,10 @@ function jsonArrayContainsTag(tags: Prisma.JsonValue, tag: string): boolean {
 }
 
 export async function listCatalogItems(
+  userId: string,
   filters: ListCatalogItemFilters = {},
-): Promise<CatalogItem[]> {
-  const where: Prisma.CatalogItemWhereInput = {};
+) {
+  const where: Prisma.CatalogItemWhereInput = { userId };
 
   if (filters.category?.trim()) {
     where.category = filters.category.trim();
@@ -51,35 +51,62 @@ export async function listCatalogItems(
   return items.filter((item) => jsonArrayContainsTag(item.tags, tag));
 }
 
-export async function getCatalogItemById(id: string): Promise<CatalogItem | null> {
-  return prisma.catalogItem.findUnique({ where: { id } });
+export async function getCatalogItemById(userId: string, id: string) {
+  return prisma.catalogItem.findUnique({
+    where: {
+      id_userId: {
+        id,
+        userId,
+      },
+    },
+  });
 }
 
 export async function createCatalogItem(
+  userId: string,
   data: Prisma.CatalogItemUncheckedCreateInput,
-): Promise<CatalogItem> {
-  return prisma.catalogItem.create({ data });
+) {
+  return prisma.catalogItem.create({
+    data: {
+      ...data,
+      userId,
+    },
+  });
 }
 
 export async function updateCatalogItem(
+  userId: string,
   id: string,
   data: Prisma.CatalogItemUpdateInput,
-): Promise<CatalogItem> {
+) {
   return prisma.catalogItem.update({
-    where: { id },
+    where: {
+      id_userId: {
+        id,
+        userId,
+      },
+    },
     data,
   });
 }
 
-export async function deleteCatalogItem(id: string): Promise<CatalogItem> {
-  return prisma.catalogItem.delete({ where: { id } });
+export async function deleteCatalogItem(userId: string, id: string) {
+  return prisma.catalogItem.delete({
+    where: {
+      id_userId: {
+        id,
+        userId,
+      },
+    },
+  });
 }
 
-export async function listCatalogFacets(): Promise<{
+export async function listCatalogFacets(userId: string): Promise<{
   categories: string[];
   tags: string[];
 }> {
   const items = await prisma.catalogItem.findMany({
+    where: { userId },
     select: {
       category: true,
       tags: true,

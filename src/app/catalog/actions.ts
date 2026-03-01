@@ -1,10 +1,10 @@
 "use server";
 
-import type { Unit as CatalogUnit } from "@prisma/client";
-import type { Prisma } from "@/types/prisma";
+import type { Unit as CatalogUnit } from "@/types/domain";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { requireUserId } from "@/lib/auth";
 import {
   createCatalogItem,
   deleteCatalogItem,
@@ -79,6 +79,7 @@ export async function saveCatalogItemAction(
   _previousState: CatalogFormActionState,
   formData: FormData,
 ): Promise<CatalogFormActionState> {
+  const userId = await requireUserId();
   const errors: CatalogFormFieldErrors = {};
 
   const itemIdEntry = formData.get("catalog_item_id");
@@ -120,7 +121,7 @@ export async function saveCatalogItemAction(
 
   try {
     if (catalogItemId) {
-      await updateCatalogItem(catalogItemId, {
+      await updateCatalogItem(userId, catalogItemId, {
         category,
         tags,
         name,
@@ -129,7 +130,7 @@ export async function saveCatalogItemAction(
         defaultUnitPrice,
       });
     } else {
-      await createCatalogItem({
+      await createCatalogItem(userId, {
         category,
         tags,
         name,
@@ -161,6 +162,7 @@ export async function saveCatalogItemAction(
 }
 
 export async function deleteCatalogItemAction(formData: FormData): Promise<void> {
+  const userId = await requireUserId();
   const itemIdEntry = formData.get("catalog_item_id");
   const itemId =
     typeof itemIdEntry === "string" && itemIdEntry.trim().length > 0
@@ -172,7 +174,7 @@ export async function deleteCatalogItemAction(formData: FormData): Promise<void>
   }
 
   try {
-    await deleteCatalogItem(itemId);
+    await deleteCatalogItem(userId, itemId);
   } catch (error) {
     if (isPrismaKnownRequestError(error, "P2025")) {
       redirect(buildCatalogUrl({ error: "Katalogova polozka nebola najdena." }));

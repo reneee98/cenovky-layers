@@ -3,6 +3,7 @@ import Link from "next/link";
 import { deleteSnippetAction } from "@/app/snippets/actions";
 import { DeleteSnippetButton } from "@/app/snippets/delete-snippet-button";
 import { AppShell } from "@/components/app-shell";
+import { requireUserId } from "@/lib/auth";
 import {
   Button,
   IconActionLink,
@@ -26,6 +27,7 @@ type SnippetsPageProps = {
 };
 
 export default async function SnippetsPage({ searchParams }: SnippetsPageProps) {
+  const userId = await requireUserId();
   const params = await searchParams;
 
   const type = params.type === "intro" || params.type === "terms" ? params.type : "";
@@ -33,7 +35,7 @@ export default async function SnippetsPage({ searchParams }: SnippetsPageProps) 
   const search = params.search?.trim() ?? "";
   const hasFilters = Boolean(type || language || search);
 
-  const snippets = await listSnippets({
+  const snippets = await listSnippets(userId, {
     type: type || undefined,
     language: language || undefined,
   });

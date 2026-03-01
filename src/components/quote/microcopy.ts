@@ -1,4 +1,4 @@
-import type { Language, QuoteStatus } from "@prisma/client";
+import type { Language, QuoteStatus } from "@/types/domain";
 
 type LocaleCopy = {
   actions: {

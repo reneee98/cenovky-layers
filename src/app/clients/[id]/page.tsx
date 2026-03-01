@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 
 import { ClientForm } from "@/app/clients/client-form";
 import { AppShell } from "@/components/app-shell";
+import { requireUserId } from "@/lib/auth";
 import { getClientById } from "@/server/repositories";
 
 type EditClientPageProps = {
@@ -11,8 +12,9 @@ type EditClientPageProps = {
 };
 
 export default async function EditClientPage({ params }: EditClientPageProps) {
+  const userId = await requireUserId();
   const { id } = await params;
-  const client = await getClientById(id);
+  const client = await getClientById(userId, id);
 
   if (!client) {
     notFound();

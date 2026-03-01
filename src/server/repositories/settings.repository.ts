@@ -1,21 +1,20 @@
-import { Settings } from "@prisma/client";
 import type { Prisma } from "@/types/prisma";
 
 import { prisma } from "@/lib/prisma";
-import { ensureSettingsSingleton } from "@/server/db/init";
-import { SETTINGS_SINGLETON_ID } from "@/server/db/settings-defaults";
+import { ensureSettingsForUser } from "@/server/db/init";
 
-export async function getSettings(): Promise<Settings> {
-  return ensureSettingsSingleton();
+export async function getSettings(userId: string) {
+  return ensureSettingsForUser(userId);
 }
 
 export async function updateSettings(
+  userId: string,
   data: Prisma.SettingsUpdateInput,
-): Promise<Settings> {
-  await ensureSettingsSingleton();
+) {
+  await ensureSettingsForUser(userId);
 
   return prisma.settings.update({
-    where: { id: SETTINGS_SINGLETON_ID },
+    where: { userId },
     data,
   });
 }

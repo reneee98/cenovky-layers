@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { AppShell } from "@/components/app-shell";
+import { requireUserId } from "@/lib/auth";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { formatQuoteStatus } from "@/lib/quotes/status";
 import {
@@ -32,10 +33,12 @@ function MetricCard({
 }
 
 export default async function Home() {
+  const userId = await requireUserId();
+
   const [quotes, clients, catalogItems] = await Promise.all([
-    listQuotesWithDetails(),
-    listClients(),
-    listCatalogItems(),
+    listQuotesWithDetails(userId),
+    listClients(userId),
+    listCatalogItems(userId),
   ]);
 
   const draftQuotes = quotes.filter((quote) => quote.status === "draft").length;

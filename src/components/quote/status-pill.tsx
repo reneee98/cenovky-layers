@@ -1,4 +1,4 @@
-import type { QuoteStatus } from "@prisma/client";
+import type { QuoteStatus } from "@/types/domain";
 
 import { Badge } from "@/components/ui/shadcn";
 

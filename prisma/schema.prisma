@@ -43,7 +43,8 @@ enum TotalDiscountType {
 }
 
 model Settings {
-  id               Int      @id @default(1)
+  id               Int      @id @default(autoincrement())
+  userId           String   @unique @map("user_id")
   companyName      String   @map("company_name")
   companyAddress   String   @map("company_address")
   companyIco       String?  @map("company_ico")
@@ -59,11 +60,13 @@ model Settings {
   numberingYear    Int      @map("numbering_year")
   numberingCounter Int      @default(0) @map("numbering_counter")
 
+  @@index([userId])
   @@map("settings")
 }
 
 model Client {
   id                  String     @id @default(cuid())
+  userId              String     @map("user_id")
   type                ClientType
   name                String
   billingAddressLine1 String     @map("billing_address_line1")
@@ -81,12 +84,14 @@ model Client {
   updatedAt           DateTime   @updatedAt @map("updated_at")
   quotes              Quote[]
 
-  @@index([name])
+  @@unique([id, userId])
+  @@index([userId, name])
   @@map("clients")
 }
 
 model CatalogItem {
   id               String   @id @default(cuid())
+  userId           String   @map("user_id")
   category         String
   tags             Json
   name             String
@@ -96,59 +101,66 @@ model CatalogItem {
   createdAt        DateTime @default(now()) @map("created_at")
   updatedAt        DateTime @updatedAt @map("updated_at")
 
-  @@index([category])
-  @@index([name])
+  @@unique([id, userId])
+  @@index([userId, category])
+  @@index([userId, name])
   @@map("catalog_items")
 }
 
 model Snippet {
-  id             String     @id @default(cuid())
-  type           SnippetType
-  language       Language
-  title          String
-  contentMarkdown String    @map("content_markdown")
-  createdAt      DateTime   @default(now()) @map("created_at")
-  updatedAt      DateTime   @updatedAt @map("updated_at")
+  id              String      @id @default(cuid())
+  userId          String      @map("user_id")
+  type            SnippetType
+  language        Language
+  title           String
+  contentMarkdown String      @map("content_markdown")
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
 
-  @@index([type, language])
+  @@unique([id, userId])
+  @@index([userId, type, language])
   @@map("snippets")
 }
 
 model Quote {
-  id                  String            @id @default(cuid())
-  number              String            @unique
-  title               String
-  status              QuoteStatus       @default(draft)
-  clientId            String            @map("client_id")
-  language            Language
-  currency            String
-  validUntil          DateTime          @map("valid_until")
-  vatEnabled          Boolean           @default(true) @map("vat_enabled")
-  vatRate             Decimal           @map("vat_rate")
-  showClientDetailsInPdf Boolean        @default(true) @map("show_client_details_in_pdf")
-  showCompanyDetailsInPdf Boolean       @default(true) @map("show_company_details_in_pdf")
-  introContentMarkdown String           @default("") @map("intro_content_markdown")
-  termsContentMarkdown String           @default("") @map("terms_content_markdown")
-  revisionsIncluded   Int               @default(1) @map("revisions_included")
-  totalDiscountType   TotalDiscountType @default(none) @map("total_discount_type")
-  totalDiscountValue  Decimal           @default(0) @map("total_discount_value")
-  createdAt           DateTime          @default(now()) @map("created_at")
-  updatedAt           DateTime          @updatedAt @map("updated_at")
+  id                      String            @id @default(cuid())
+  userId                  String            @map("user_id")
+  number                  String
+  title                   String
+  status                  QuoteStatus       @default(draft)
+  clientId                String            @map("client_id")
+  language                Language
+  currency                String
+  validUntil              DateTime          @map("valid_until")
+  vatEnabled              Boolean           @default(true) @map("vat_enabled")
+  vatRate                 Decimal           @map("vat_rate")
+  showClientDetailsInPdf  Boolean           @default(true) @map("show_client_details_in_pdf")
+  showCompanyDetailsInPdf Boolean           @default(true) @map("show_company_details_in_pdf")
+  introContentMarkdown    String            @default("") @map("intro_content_markdown")
+  termsContentMarkdown    String            @default("") @map("terms_content_markdown")
+  revisionsIncluded       Int               @default(1) @map("revisions_included")
+  totalDiscountType       TotalDiscountType @default(none) @map("total_discount_type")
+  totalDiscountValue      Decimal           @default(0) @map("total_discount_value")
+  createdAt               DateTime          @default(now()) @map("created_at")
+  updatedAt               DateTime          @updatedAt @map("updated_at")
 
-  client      Client         @relation(fields: [clientId], references: [id], onDelete: Restrict)
-  items       QuoteItem[]
-  scopeItems  ScopeItem[]
-  versions    QuoteVersion[]
+  client     Client       @relation(fields: [clientId, userId], references: [id, userId], onDelete: Restrict)
+  items      QuoteItem[]
+  scopeItems ScopeItem[]
+  versions   QuoteVersion[]
 
-  @@index([status])
-  @@index([clientId])
-  @@index([currency])
-  @@index([createdAt])
+  @@unique([id, userId])
+  @@unique([userId, number])
+  @@index([userId, status])
+  @@index([userId, clientId])
+  @@index([userId, currency])
+  @@index([userId, createdAt])
   @@map("quotes")
 }
 
 model QuoteItem {
   id          String   @id @default(cuid())
+  userId      String   @map("user_id")
   quoteId     String   @map("quote_id")
   name        String
   description String?
@@ -158,14 +170,16 @@ model QuoteItem {
   discountPct Decimal  @default(0) @map("discount_pct")
   sortOrder   Int      @map("sort_order")
 
-  quote Quote @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  quote Quote @relation(fields: [quoteId, userId], references: [id, userId], onDelete: Cascade)
 
-  @@index([quoteId, sortOrder])
+  @@unique([id, userId])
+  @@index([userId, quoteId, sortOrder])
   @@map("quote_items")
 }
 
 model ScopeItem {
   id          String   @id @default(cuid())
+  userId      String   @map("user_id")
   quoteId     String   @map("quote_id")
   category    String
   itemKey     String   @map("item_key")
@@ -173,24 +187,27 @@ model ScopeItem {
   description String?
   sortOrder   Int      @map("sort_order")
 
-  quote Quote @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  quote Quote @relation(fields: [quoteId, userId], references: [id, userId], onDelete: Cascade)
 
-  @@index([quoteId, category])
-  @@index([quoteId, sortOrder])
+  @@unique([id, userId])
+  @@index([userId, quoteId, category])
+  @@index([userId, quoteId, sortOrder])
   @@map("scope_items")
 }
 
 model QuoteVersion {
   id            String   @id @default(cuid())
+  userId        String   @map("user_id")
   quoteId       String   @map("quote_id")
   versionNumber Int      @map("version_number")
   exportedAt    DateTime @default(now()) @map("exported_at")
   snapshotJson  Json     @map("snapshot_json")
   pdfFileUrl    String   @map("pdf_file_url")
 
-  quote Quote @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  quote Quote @relation(fields: [quoteId, userId], references: [id, userId], onDelete: Cascade)
 
-  @@unique([quoteId, versionNumber])
-  @@index([quoteId])
+  @@unique([id, userId])
+  @@unique([userId, quoteId, versionNumber])
+  @@index([userId, quoteId])
   @@map("quote_versions")
 }

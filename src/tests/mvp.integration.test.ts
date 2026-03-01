@@ -6,20 +6,23 @@ import Database from "better-sqlite3";
 
 type PrismaType = typeof import("../lib/prisma.ts").prisma;
 type ReserveNextQuoteNumberType = typeof import("../server/quotes/numbering.ts").reserveNextQuoteNumber;
-type EnsureSettingsSingletonType = typeof import("../server/db/init.ts").ensureSettingsSingleton;
+type EnsureSettingsForUserType = typeof import("../server/db/init.ts").ensureSettingsForUser;
 type ExportQuoteToPdfVersionType = typeof import("../server/quotes/pdf-export.ts").exportQuoteToPdfVersion;
 type GetQuoteVersionDownloadPayloadType = typeof import("../server/quotes/pdf-export.ts").getQuoteVersionDownloadPayload;
 
 const TEST_DB_FILENAME = "test-integration.db";
+const TEST_USER_ID = "00000000-0000-0000-0000-000000000001";
+
 let prisma: PrismaType;
 let reserveNextQuoteNumber: ReserveNextQuoteNumberType;
-let ensureSettingsSingleton: EnsureSettingsSingletonType;
+let ensureSettingsForUser: EnsureSettingsForUserType;
 let exportQuoteToPdfVersion: ExportQuoteToPdfVersionType;
 let getQuoteVersionDownloadPayload: GetQuoteVersionDownloadPayloadType;
 
 async function createClient(name: string) {
   return prisma.client.create({
     data: {
+      userId: TEST_USER_ID,
       type: "company",
       name,
       billingAddressLine1: "Street 1",
@@ -35,6 +38,7 @@ async function createClient(name: string) {
 async function createQuote(params: { clientId: string; number: string }) {
   return prisma.quote.create({
     data: {
+      userId: TEST_USER_ID,
       number: params.number,
       title: "Integration Quote",
       status: "draft",
@@ -52,6 +56,7 @@ async function createQuote(params: { clientId: string; number: string }) {
       items: {
         create: [
           {
+            userId: TEST_USER_ID,
             name: "Design",
             description: "UI work",
             unit: "h",
@@ -61,6 +66,7 @@ async function createQuote(params: { clientId: string; number: string }) {
             sortOrder: 0,
           },
           {
+            userId: TEST_USER_ID,
             name: "Consulting",
             description: null,
             unit: "h",
@@ -101,12 +107,12 @@ before(async () => {
 
   ({ prisma } = await import("../lib/prisma.ts"));
   ({ reserveNextQuoteNumber } = await import("../server/quotes/numbering.ts"));
-  ({ ensureSettingsSingleton } = await import("../server/db/init.ts"));
+  ({ ensureSettingsForUser } = await import("../server/db/init.ts"));
   ({ exportQuoteToPdfVersion, getQuoteVersionDownloadPayload } = await import(
     "../server/quotes/pdf-export.ts"
   ));
 
-  await ensureSettingsSingleton();
+  await ensureSettingsForUser(TEST_USER_ID);
 });
 
 after(async () => {
@@ -122,11 +128,12 @@ after(async () => {
 beforeEach(async () => {
   await prisma.quoteVersion.deleteMany();
   await prisma.quoteItem.deleteMany();
+  await prisma.scopeItem.deleteMany();
   await prisma.quote.deleteMany();
   await prisma.client.deleteMany();
 
   await prisma.settings.update({
-    where: { id: 1 },
+    where: { userId: TEST_USER_ID },
     data: {
       numberingYear: 2026,
       numberingCounter: 0,
@@ -139,8 +146,8 @@ beforeEach(async () => {
 
 describe("MVP integration checks", () => {
   it("generates YYYY-### numbers and skips already used numbers", async () => {
-    const numberOne = await reserveNextQuoteNumber();
-    const numberTwo = await reserveNextQuoteNumber();
+    const numberOne = await reserveNextQuoteNumber(TEST_USER_ID);
+    const numberTwo = await reserveNextQuoteNumber(TEST_USER_ID);
 
     assert.equal(numberOne, "2026-001");
     assert.equal(numberTwo, "2026-002");
@@ -148,30 +155,30 @@ describe("MVP integration checks", () => {
     const client = await createClient("Numbering Client");
     await createQuote({ clientId: client.id, number: "2026-003" });
 
-    const numberThree = await reserveNextQuoteNumber();
+    const numberThree = await reserveNextQuoteNumber(TEST_USER_ID);
     assert.equal(numberThree, "2026-004");
   });
 
   it("respects year reset via Settings values", async () => {
     await prisma.settings.update({
-      where: { id: 1 },
+      where: { userId: TEST_USER_ID },
       data: {
         numberingYear: 2030,
         numberingCounter: 0,
       },
     });
 
-    const next = await reserveNextQuoteNumber();
+    const next = await reserveNextQuoteNumber(TEST_USER_ID);
     assert.equal(next, "2030-001");
   });
 
   it("keeps a single QuoteVersion snapshot and regenerates identical PDF from snapshot", async () => {
     const client = await createClient("Export Client");
-    const quoteNumber = await reserveNextQuoteNumber();
+    const quoteNumber = await reserveNextQuoteNumber(TEST_USER_ID);
     const quote = await createQuote({ clientId: client.id, number: quoteNumber });
 
-    const exportOne = await exportQuoteToPdfVersion(quote.id);
-    const exportTwo = await exportQuoteToPdfVersion(quote.id);
+    const exportOne = await exportQuoteToPdfVersion(TEST_USER_ID, quote.id);
+    const exportTwo = await exportQuoteToPdfVersion(TEST_USER_ID, quote.id);
 
     assert.ok(exportOne, "First export should return a version result.");
     assert.ok(exportTwo, "Second export should return a version result.");
@@ -179,7 +186,10 @@ describe("MVP integration checks", () => {
     assert.equal(exportTwo?.versionNumber, 1);
 
     const versions = await prisma.quoteVersion.findMany({
-      where: { quoteId: quote.id },
+      where: {
+        userId: TEST_USER_ID,
+        quoteId: quote.id,
+      },
       orderBy: { versionNumber: "asc" },
     });
 
@@ -189,14 +199,14 @@ describe("MVP integration checks", () => {
     const versionOneSnapshot = versions[0].snapshotJson as { totals?: { grandTotal?: unknown } };
     assert.equal(typeof versionOneSnapshot?.totals?.grandTotal, "number");
 
-    const downloadedFirst = await getQuoteVersionDownloadPayload(versions[0].id);
+    const downloadedFirst = await getQuoteVersionDownloadPayload(TEST_USER_ID, versions[0].id);
     assert.ok(downloadedFirst);
     assert.ok(downloadedFirst!.bytes.length > 0);
 
     const storedPdfAbsolutePath = resolve(process.cwd(), "storage", versions[0].pdfFileUrl);
     await unlink(storedPdfAbsolutePath);
 
-    const downloadedAfterRegeneration = await getQuoteVersionDownloadPayload(versions[0].id);
+    const downloadedAfterRegeneration = await getQuoteVersionDownloadPayload(TEST_USER_ID, versions[0].id);
     assert.ok(downloadedAfterRegeneration);
     assert.ok(downloadedAfterRegeneration!.bytes.length > 0);
     assert.equal(

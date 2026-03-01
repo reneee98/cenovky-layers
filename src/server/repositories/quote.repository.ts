@@ -1,10 +1,7 @@
-import { Quote } from "@prisma/client";
-import type { QuoteStatus as QuoteStatusEnum } from "@prisma/client";
+import type { QuoteStatus } from "@/types/domain";
 import type { Prisma } from "@/types/prisma";
 
 import { prisma } from "@/lib/prisma";
-
-type QuoteStatus = QuoteStatusEnum;
 
 export type ListQuotesFilters = {
   status?: QuoteStatus;
@@ -15,8 +12,11 @@ export type ListQuotesFilters = {
   search?: string;
 };
 
-function buildQuoteListWhere(filters: ListQuotesFilters): Prisma.QuoteWhereInput {
-  const where: Prisma.QuoteWhereInput = {};
+function buildQuoteListWhere(
+  userId: string,
+  filters: ListQuotesFilters,
+): Prisma.QuoteWhereInput {
+  const where: Prisma.QuoteWhereInput = { userId };
 
   if (filters.status) {
     where.status = filters.status;
@@ -51,19 +51,21 @@ function buildQuoteListWhere(filters: ListQuotesFilters): Prisma.QuoteWhereInput
 }
 
 export async function listQuotes(
+  userId: string,
   filters: ListQuotesFilters = {},
-): Promise<Quote[]> {
+) {
   return prisma.quote.findMany({
-    where: buildQuoteListWhere(filters),
+    where: buildQuoteListWhere(userId, filters),
     orderBy: [{ createdAt: "desc" }],
   });
 }
 
 export async function listQuotesWithDetails(
+  userId: string,
   filters: ListQuotesFilters = {},
 ) {
   return prisma.quote.findMany({
-    where: buildQuoteListWhere(filters),
+    where: buildQuoteListWhere(userId, filters),
     include: {
       client: {
         select: {
@@ -83,8 +85,9 @@ export async function listQuotesWithDetails(
   });
 }
 
-export async function listQuoteCurrencies(): Promise<string[]> {
+export async function listQuoteCurrencies(userId: string): Promise<string[]> {
   const rows = await prisma.quote.findMany({
+    where: { userId },
     select: { currency: true },
     distinct: ["currency"],
     orderBy: [{ currency: "asc" }],
@@ -93,15 +96,25 @@ export async function listQuoteCurrencies(): Promise<string[]> {
   return rows.map((row) => row.currency);
 }
 
-export async function getQuoteById(id: string): Promise<Quote | null> {
+export async function getQuoteById(userId: string, id: string) {
   return prisma.quote.findUnique({
-    where: { id },
+    where: {
+      id_userId: {
+        id,
+        userId,
+      },
+    },
   });
 }
 
-export async function getQuoteWithRelations(id: string) {
+export async function getQuoteWithRelations(userId: string, id: string) {
   return prisma.quote.findUnique({
-    where: { id },
+    where: {
+      id_userId: {
+        id,
+        userId,
+      },
+    },
     include: {
       client: true,
       items: {
@@ -115,42 +128,73 @@ export async function getQuoteWithRelations(id: string) {
 }
 
 export async function createQuote(
+  userId: string,
   data: Prisma.QuoteUncheckedCreateInput,
-): Promise<Quote> {
-  return prisma.quote.create({ data });
+) {
+  return prisma.quote.create({
+    data: {
+      ...data,
+      userId,
+    },
+  });
 }
 
 export async function updateQuote(
+  userId: string,
   id: string,
   data: Prisma.QuoteUpdateInput,
-): Promise<Quote> {
+) {
   return prisma.quote.update({
-    where: { id },
+    where: {
+      id_userId: {
+        id,
+        userId,
+      },
+    },
     data,
   });
 }
 
-export async function deleteQuote(id: string): Promise<Quote> {
-  return prisma.quote.delete({ where: { id } });
+export async function deleteQuote(userId: string, id: string) {
+  return prisma.quote.delete({
+    where: {
+      id_userId: {
+        id,
+        userId,
+      },
+    },
+  });
 }
 
 export async function setQuoteStatus(
+  userId: string,
   id: string,
   status: QuoteStatus,
-): Promise<Quote> {
+) {
   return prisma.quote.update({
-    where: { id },
+    where: {
+      id_userId: {
+        id,
+        userId,
+      },
+    },
     data: { status },
   });
 }
 
 export async function duplicateQuote(
+  userId: string,
   quoteId: string,
   newNumber: string,
-): Promise<Quote> {
+) {
   return prisma.$transaction(async (tx) => {
     const source = await tx.quote.findUnique({
-      where: { id: quoteId },
+      where: {
+        id_userId: {
+          id: quoteId,
+          userId,
+        },
+      },
       include: {
         items: {
           orderBy: [{ sortOrder: "asc" }],
@@ -167,6 +211,7 @@ export async function duplicateQuote(
 
     const duplicatedQuote = await tx.quote.create({
       data: {
+        userId,
         number: newNumber,
         title: `${source.title} (Copy)`,
         status: "draft",
@@ -189,6 +234,7 @@ export async function duplicateQuote(
     if (source.items.length > 0) {
       await tx.quoteItem.createMany({
         data: source.items.map((item) => ({
+          userId,
           quoteId: duplicatedQuote.id,
           name: item.name,
           description: item.description,
@@ -204,6 +250,7 @@ export async function duplicateQuote(
     if (source.scopeItems.length > 0) {
       await tx.scopeItem.createMany({
         data: source.scopeItems.map((item) => ({
+          userId,
           quoteId: duplicatedQuote.id,
           category: item.category,
           itemKey: item.itemKey,

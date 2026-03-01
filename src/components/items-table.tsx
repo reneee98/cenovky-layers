@@ -1,6 +1,6 @@
 "use client";
 
-import type { TotalDiscountType, Unit } from "@prisma/client";
+import type { TotalDiscountType, Unit } from "@/types/domain";
 import type { DragEvent as ReactDragEvent, KeyboardEvent as ReactKeyboardEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 

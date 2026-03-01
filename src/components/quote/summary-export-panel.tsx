@@ -1,6 +1,6 @@
 "use client";
 
-import type { QuoteStatus } from "@prisma/client";
+import type { QuoteStatus } from "@/types/domain";
 import Link from "next/link";
 import { Download, Save } from "lucide-react";
 

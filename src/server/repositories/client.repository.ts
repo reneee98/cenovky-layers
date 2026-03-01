@@ -1,4 +1,3 @@
-import { Client } from "@prisma/client";
 import type { Prisma } from "@/types/prisma";
 
 import { prisma } from "@/lib/prisma";
@@ -8,9 +7,10 @@ export type ListClientsFilters = {
 };
 
 export async function listClients(
+  userId: string,
   filters: ListClientsFilters = {},
-): Promise<Client[]> {
-  const where: Prisma.ClientWhereInput = {};
+) {
+  const where: Prisma.ClientWhereInput = { userId };
 
   if (filters.search?.trim()) {
     const search = filters.search.trim();
@@ -24,26 +24,52 @@ export async function listClients(
   });
 }
 
-export async function getClientById(id: string): Promise<Client | null> {
-  return prisma.client.findUnique({ where: { id } });
+export async function getClientById(userId: string, id: string) {
+  return prisma.client.findUnique({
+    where: {
+      id_userId: {
+        id,
+        userId,
+      },
+    },
+  });
 }
 
 export async function createClient(
+  userId: string,
   data: Prisma.ClientUncheckedCreateInput,
-): Promise<Client> {
-  return prisma.client.create({ data });
+) {
+  return prisma.client.create({
+    data: {
+      ...data,
+      userId,
+    },
+  });
 }
 
 export async function updateClient(
+  userId: string,
   id: string,
   data: Prisma.ClientUpdateInput,
-): Promise<Client> {
+) {
   return prisma.client.update({
-    where: { id },
+    where: {
+      id_userId: {
+        id,
+        userId,
+      },
+    },
     data,
   });
 }
 
-export async function deleteClient(id: string): Promise<Client> {
-  return prisma.client.delete({ where: { id } });
+export async function deleteClient(userId: string, id: string) {
+  return prisma.client.delete({
+    where: {
+      id_userId: {
+        id,
+        userId,
+      },
+    },
+  });
 }

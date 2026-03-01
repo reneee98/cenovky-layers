@@ -5,6 +5,7 @@ import type { Prisma } from "@/types/prisma";
 import { duplicateQuoteToBuilderAction } from "@/app/quotes/actions";
 import { QuoteBuilderEditor } from "@/app/quotes/[id]/quote-builder-editor";
 import { AppShell } from "@/components/app-shell";
+import { requireUserId } from "@/lib/auth";
 import { isQuoteItemSectionDescription } from "@/lib/quotes/items";
 import {
   getQuoteWithRelations,
@@ -31,13 +32,14 @@ function toStringTags(tags: Prisma.JsonValue): string[] {
 }
 
 export default async function QuoteBuilderPage({ params, searchParams }: QuoteBuilderPageProps) {
+  const userId = await requireUserId();
   const [{ id }, query] = await Promise.all([params, searchParams]);
 
   const [quote, clients, catalogItems, snippets] = await Promise.all([
-    getQuoteWithRelations(id),
-    listClients(),
-    listCatalogItems(),
-    listSnippets(),
+    getQuoteWithRelations(userId, id),
+    listClients(userId),
+    listCatalogItems(userId),
+    listSnippets(userId),
   ]);
 
   if (!quote) {

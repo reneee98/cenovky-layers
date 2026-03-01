@@ -1,6 +1,6 @@
 "use client";
 
-import type { Language, QuoteStatus, TotalDiscountType } from "@prisma/client";
+import type { Language, QuoteStatus, TotalDiscountType } from "@/types/domain";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { type CatalogPickerItem } from "@/components/catalog-picker";
