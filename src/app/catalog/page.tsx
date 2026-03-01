@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { Prisma } from "@prisma/client";
+import type { Prisma } from "@/types/prisma";
 
 import { deleteCatalogItemAction } from "@/app/catalog/actions";
 import { DeleteCatalogItemButton } from "@/app/catalog/delete-catalog-item-button";

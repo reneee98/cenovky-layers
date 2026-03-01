@@ -1,8 +1,10 @@
-import { Prisma, Quote } from "@prisma/client";
+import { Quote } from "@prisma/client";
+import type { QuoteStatus as QuoteStatusEnum } from "@prisma/client";
+import type { Prisma } from "@/types/prisma";
 
 import { prisma } from "@/lib/prisma";
 
-type QuoteStatus = Prisma.$Enums.QuoteStatus;
+type QuoteStatus = QuoteStatusEnum;
 
 export type ListQuotesFilters = {
   status?: QuoteStatus;

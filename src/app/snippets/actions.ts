@@ -1,13 +1,18 @@
 "use server";
 
-import { Prisma } from "@prisma/client";
+import type {
+  Language as SnippetLanguage,
+  SnippetType as SnippetKind,
+} from "@prisma/client";
+import type { Prisma } from "@/types/prisma";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { isPrismaKnownRequestError } from "@/lib/prisma-errors";
 import { createSnippet, deleteSnippet, updateSnippet } from "@/server/repositories";
 
-type Language = Prisma.$Enums.Language;
-type SnippetType = Prisma.$Enums.SnippetType;
+type Language = SnippetLanguage;
+type SnippetType = SnippetKind;
 
 type SnippetFormFieldErrors = Partial<
   Record<"type" | "language" | "title" | "content_markdown", string>
@@ -99,10 +104,7 @@ export async function saveSnippetAction(
       });
     }
   } catch (error) {
-    if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === "P2025"
-    ) {
+    if (isPrismaKnownRequestError(error, "P2025")) {
       return {
         status: "error",
         message: "Sablona nebola najdena.",
@@ -136,10 +138,7 @@ export async function deleteSnippetAction(formData: FormData): Promise<void> {
   try {
     await deleteSnippet(snippetId);
   } catch (error) {
-    if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === "P2025"
-    ) {
+    if (isPrismaKnownRequestError(error, "P2025")) {
       redirect(buildSnippetsUrl({ error: "Sablona nebola najdena." }));
     }
 

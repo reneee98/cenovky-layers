@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import type { Prisma } from "@prisma/client";
+import type { Prisma } from "@/types/prisma";
 
 import { CatalogForm } from "@/app/catalog/catalog-form";
 import { AppShell } from "@/components/app-shell";

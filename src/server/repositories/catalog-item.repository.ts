@@ -1,4 +1,5 @@
-import { CatalogItem, Prisma } from "@prisma/client";
+import { CatalogItem } from "@prisma/client";
+import type { Prisma } from "@/types/prisma";
 
 import { prisma } from "@/lib/prisma";
 

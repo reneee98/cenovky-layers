@@ -1,7 +1,7 @@
 import "dotenv/config";
 
 import { PrismaPg } from "@prisma/adapter-pg";
-import { Prisma, PrismaClient } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 
 const connectionString = process.env.DATABASE_URL;
 
@@ -23,7 +23,7 @@ const defaults = {
   companyPhone: "+421900000000",
   defaultLanguage: "sk",
   defaultCurrency: "EUR",
-  vatRate: new Prisma.Decimal(20),
+  vatRate: 20,
   numberingYear: new Date().getFullYear(),
   numberingCounter: 0,
 };

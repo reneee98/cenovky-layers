@@ -1,12 +1,13 @@
-import { Prisma } from "@prisma/client";
+import type { Language as SettingsLanguage } from "@prisma/client";
+import type { Prisma } from "@/types/prisma";
 
-type Language = Prisma.$Enums.Language;
+type Language = SettingsLanguage;
 
 export const SETTINGS_SINGLETON_ID = 1;
 
 export const DEFAULT_SETTINGS_LANGUAGE: Language = "sk";
 export const DEFAULT_SETTINGS_CURRENCY = "EUR";
-export const DEFAULT_SETTINGS_VAT_RATE = new Prisma.Decimal(20);
+export const DEFAULT_SETTINGS_VAT_RATE = 20;
 
 export function buildDefaultSettingsCreateInput(
   currentYear = new Date().getFullYear(),

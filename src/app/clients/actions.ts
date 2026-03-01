@@ -1,6 +1,6 @@
 "use server";
 
-import { Prisma } from "@prisma/client";
+import type { Prisma } from "@/types/prisma";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -9,6 +9,7 @@ import {
   deleteClient,
   updateClient,
 } from "@/server/repositories";
+import { isPrismaKnownRequestError } from "@/lib/prisma-errors";
 
 type ClientFormFieldErrors = Partial<
   Record<
@@ -142,10 +143,7 @@ export async function saveClientAction(
       });
     }
   } catch (error) {
-    if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === "P2025"
-    ) {
+    if (isPrismaKnownRequestError(error, "P2025")) {
       return {
         status: "error",
         message: "Klient nebol najdeny.",
@@ -178,10 +176,7 @@ export async function deleteClientAction(formData: FormData): Promise<void> {
   try {
     await deleteClient(clientId);
   } catch (error) {
-    if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === "P2003"
-    ) {
+    if (isPrismaKnownRequestError(error, "P2003")) {
       redirect(
         buildClientsUrl({
           error: "Klient je pouzity v existujucich ponukach a neda sa vymazat.",
@@ -189,10 +184,7 @@ export async function deleteClientAction(formData: FormData): Promise<void> {
       );
     }
 
-    if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === "P2025"
-    ) {
+    if (isPrismaKnownRequestError(error, "P2025")) {
       redirect(buildClientsUrl({ error: "Klient nebol najdeny." }));
     }
 

@@ -1,4 +1,5 @@
-import { Prisma, Settings } from "@prisma/client";
+import { Settings } from "@prisma/client";
+import type { Prisma } from "@/types/prisma";
 
 import { prisma } from "@/lib/prisma";
 import { ensureSettingsSingleton } from "@/server/db/init";

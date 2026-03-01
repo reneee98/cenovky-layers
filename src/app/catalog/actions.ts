@@ -1,6 +1,7 @@
 "use server";
 
-import { Prisma } from "@prisma/client";
+import type { Unit as CatalogUnit } from "@prisma/client";
+import type { Prisma } from "@/types/prisma";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -9,8 +10,9 @@ import {
   deleteCatalogItem,
   updateCatalogItem,
 } from "@/server/repositories";
+import { isPrismaKnownRequestError } from "@/lib/prisma-errors";
 
-type Unit = Prisma.$Enums.Unit;
+type Unit = CatalogUnit;
 
 type CatalogFormFieldErrors = Partial<
   Record<
@@ -137,10 +139,7 @@ export async function saveCatalogItemAction(
       });
     }
   } catch (error) {
-    if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === "P2025"
-    ) {
+    if (isPrismaKnownRequestError(error, "P2025")) {
       return {
         status: "error",
         message: "Katalogova polozka nebola najdena.",
@@ -175,10 +174,7 @@ export async function deleteCatalogItemAction(formData: FormData): Promise<void>
   try {
     await deleteCatalogItem(itemId);
   } catch (error) {
-    if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === "P2025"
-    ) {
+    if (isPrismaKnownRequestError(error, "P2025")) {
       redirect(buildCatalogUrl({ error: "Katalogova polozka nebola najdena." }));
     }
 

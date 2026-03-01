@@ -1,4 +1,5 @@
-import { Prisma, QuoteItem } from "@prisma/client";
+import { QuoteItem } from "@prisma/client";
+import type { Prisma } from "@/types/prisma";
 
 import { prisma } from "@/lib/prisma";
 

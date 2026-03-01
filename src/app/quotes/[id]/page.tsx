@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import type { Prisma } from "@prisma/client";
+import type { Prisma } from "@/types/prisma";
 
 import { duplicateQuoteToBuilderAction } from "@/app/quotes/actions";
 import { QuoteBuilderEditor } from "@/app/quotes/[id]/quote-builder-editor";

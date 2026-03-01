@@ -4,12 +4,13 @@ import { randomUUID } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import { extname, join } from "node:path";
 
-import { Prisma } from "@prisma/client";
+import type { Language as SettingsLanguage } from "@prisma/client";
+import type { Prisma } from "@/types/prisma";
 import { revalidatePath } from "next/cache";
 
 import { getSettings, updateSettings } from "@/server/repositories";
 
-type Language = Prisma.$Enums.Language;
+type Language = SettingsLanguage;
 
 type SettingsFormFieldErrors = Partial<
   Record<

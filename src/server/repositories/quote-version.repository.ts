@@ -1,4 +1,5 @@
-import { Prisma, QuoteVersion } from "@prisma/client";
+import { QuoteVersion } from "@prisma/client";
+import type { Prisma } from "@/types/prisma";
 
 import { prisma } from "@/lib/prisma";
 

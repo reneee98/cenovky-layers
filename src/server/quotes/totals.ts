@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import type { Prisma } from "@/types/prisma";
 
 import {
   calculateQuoteTotals as calculateQuoteTotalsFromNumbers,

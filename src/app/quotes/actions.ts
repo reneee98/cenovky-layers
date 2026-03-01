@@ -1,6 +1,7 @@
 "use server";
 
-import { Prisma } from "@prisma/client";
+import type { QuoteStatus as QuoteStatusEnum } from "@prisma/client";
+import type { Prisma } from "@/types/prisma";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -11,10 +12,11 @@ import {
   getSettings,
   setQuoteStatus,
 } from "@/server/repositories";
+import { isPrismaKnownRequestError } from "@/lib/prisma-errors";
 import { isQuoteStatus } from "@/lib/quotes/status";
 import { reserveNextQuoteNumber } from "@/server/quotes/numbering";
 
-type QuoteStatus = Prisma.$Enums.QuoteStatus;
+type QuoteStatus = QuoteStatusEnum;
 
 function buildQuotesUrl(query: Record<string, string>): string {
   const params = new URLSearchParams(query);
@@ -86,10 +88,7 @@ export async function createDraftQuoteAction(formData: FormData): Promise<void> 
     revalidatePath("/quotes");
     redirect(buildQuoteBuilderUrl(quote.id, { notice: "Ponuka bola vytvorena." }));
   } catch (error) {
-    if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      (error.code === "P2003" || error.code === "P2025")
-    ) {
+    if (isPrismaKnownRequestError(error, "P2003", "P2025")) {
       redirect("/quotes/new?error=Vybrany klient nebol najdeny.");
     }
 
@@ -117,10 +116,7 @@ export async function changeQuoteStatusAction(formData: FormData): Promise<void>
   try {
     await setQuoteStatus(quoteId, status);
   } catch (error) {
-    if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === "P2025"
-    ) {
+    if (isPrismaKnownRequestError(error, "P2025")) {
       redirect(buildQuotesUrl({ error: "Ponuka nebola najdena." }));
     }
 
@@ -147,10 +143,7 @@ export async function duplicateQuoteAction(formData: FormData): Promise<void> {
   try {
     await duplicateQuoteWithNewNumber(quoteId);
   } catch (error) {
-    if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === "P2025"
-    ) {
+    if (isPrismaKnownRequestError(error, "P2025")) {
       redirect(buildQuotesUrl({ error: "Ponuka nebola najdena." }));
     }
 
@@ -180,10 +173,7 @@ export async function duplicateQuoteToBuilderAction(formData: FormData): Promise
 
     redirect(buildQuoteBuilderUrl(duplicated.id, { notice: "Ponuka bola duplikovana." }));
   } catch (error) {
-    if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === "P2025"
-    ) {
+    if (isPrismaKnownRequestError(error, "P2025")) {
       redirect(buildQuotesUrl({ error: "Ponuka nebola najdena." }));
     }
 
@@ -205,10 +195,7 @@ export async function deleteQuoteAction(formData: FormData): Promise<void> {
   try {
     await deleteQuote(quoteId);
   } catch (error) {
-    if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === "P2025"
-    ) {
+    if (isPrismaKnownRequestError(error, "P2025")) {
       redirect(buildQuotesUrl({ error: "Ponuka nebola najdena." }));
     }
 
