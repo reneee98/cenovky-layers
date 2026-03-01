@@ -19,7 +19,7 @@ export async function listQuoteItems(userId: string, quoteId: string) {
 
 export async function createQuoteItem(
   userId: string,
-  data: Prisma.QuoteItemUncheckedCreateInput,
+  data: Omit<Prisma.QuoteItemUncheckedCreateInput, "userId">,
 ) {
   return prisma.quoteItem.create({
     data: {

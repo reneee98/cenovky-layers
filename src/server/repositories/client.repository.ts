@@ -37,7 +37,7 @@ export async function getClientById(userId: string, id: string) {
 
 export async function createClient(
   userId: string,
-  data: Prisma.ClientUncheckedCreateInput,
+  data: Omit<Prisma.ClientUncheckedCreateInput, "userId">,
 ) {
   return prisma.client.create({
     data: {

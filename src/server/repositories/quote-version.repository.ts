@@ -28,7 +28,7 @@ export async function getQuoteVersionById(
 
 export async function createQuoteVersion(
   userId: string,
-  data: Prisma.QuoteVersionUncheckedCreateInput,
+  data: Omit<Prisma.QuoteVersionUncheckedCreateInput, "userId">,
 ) {
   return prisma.quoteVersion.create({
     data: {

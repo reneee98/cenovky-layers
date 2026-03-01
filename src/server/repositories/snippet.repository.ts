@@ -41,7 +41,7 @@ export async function getSnippetById(userId: string, id: string) {
 
 export async function createSnippet(
   userId: string,
-  data: Prisma.SnippetUncheckedCreateInput,
+  data: Omit<Prisma.SnippetUncheckedCreateInput, "userId">,
 ) {
   return prisma.snippet.create({
     data: {

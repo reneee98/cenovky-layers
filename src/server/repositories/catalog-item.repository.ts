@@ -64,7 +64,7 @@ export async function getCatalogItemById(userId: string, id: string) {
 
 export async function createCatalogItem(
   userId: string,
-  data: Prisma.CatalogItemUncheckedCreateInput,
+  data: Omit<Prisma.CatalogItemUncheckedCreateInput, "userId">,
 ) {
   return prisma.catalogItem.create({
     data: {

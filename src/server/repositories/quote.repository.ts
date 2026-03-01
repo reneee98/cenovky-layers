@@ -129,7 +129,7 @@ export async function getQuoteWithRelations(userId: string, id: string) {
 
 export async function createQuote(
   userId: string,
-  data: Prisma.QuoteUncheckedCreateInput,
+  data: Omit<Prisma.QuoteUncheckedCreateInput, "userId">,
 ) {
   return prisma.quote.create({
     data: {
