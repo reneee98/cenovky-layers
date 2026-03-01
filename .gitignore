@@ -34,6 +34,7 @@ yarn-error.log*
 .env*
 /dev.db
 /dev.db-journal
+/storage
 
 # vercel
 .vercel

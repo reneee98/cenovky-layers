@@ -1,0 +1,195 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-02-14T12:00:00.000Z",
+  "company": {
+    "companyName": "Studio North s.r.o.",
+    "companyAddress": "Sancova 12, 811 04 Bratislava",
+    "companyIco": "56006420",
+    "companyDic": "2122163384",
+    "companyIcdph": "SK2122163384",
+    "companyEmail": "hello@studionorth.sk",
+    "companyPhone": "+421 900 100 200",
+    "companyWebsite": "www.studionorth.sk",
+    "logoUrl": null,
+    "logoImage": null
+  },
+  "quote": {
+    "id": "quote-sk-eur-vat-on",
+    "number": "2026-021",
+    "title": "Web a identita - start",
+    "status": "draft",
+    "language": "sk",
+    "currency": "EUR",
+    "validUntil": "2026-03-14T00:00:00.000Z",
+    "vatEnabled": true,
+    "vatRate": 20,
+    "introContentMarkdown": "Dakujeme za doveru. Nizsie najdete cenovu ponuku pripravenu pre rychly start projektu.",
+    "termsContentMarkdown": "Platnost ponuky je 30 dni. Fakturacia prebieha po etapach podla harmonogramu.",
+    "revisionsIncluded": 2,
+    "totalDiscountType": "pct",
+    "totalDiscountValue": 8,
+    "createdAt": "2026-02-14T12:00:00.000Z",
+    "updatedAt": "2026-02-14T12:00:00.000Z"
+  },
+  "client": {
+    "id": "client-sk-eur-vat-on",
+    "type": "company",
+    "name": "Klient Demo, a.s.",
+    "billingAddressLine1": "Mlynske nivy 20",
+    "billingAddressLine2": null,
+    "city": "Bratislava",
+    "zip": "821 09",
+    "country": "Slovakia",
+    "ico": "51234567",
+    "dic": "2120123456",
+    "icdph": "SK2120123456",
+    "contactName": "Jana Novakova",
+    "contactEmail": "jana@klient-demo.sk",
+    "contactPhone": "+421 907 123 456"
+  },
+  "items": [
+    {
+      "id": "item-sk-eur-vat-on-1",
+      "name": "Design sprint phase 1",
+      "description": "Detailed planning, execution and stakeholder alignment.",
+      "unit": "day",
+      "qty": 1,
+      "unitPrice": 120,
+      "discountPct": 10,
+      "sortOrder": 0
+    },
+    {
+      "id": "item-sk-eur-vat-on-2",
+      "name": "Implementation block 2",
+      "description": null,
+      "unit": "h",
+      "qty": 7,
+      "unitPrice": 128,
+      "discountPct": 0,
+      "sortOrder": 1
+    },
+    {
+      "id": "item-sk-eur-vat-on-3",
+      "name": "Implementation block 3",
+      "description": "Detailed planning, execution and stakeholder alignment.",
+      "unit": "h",
+      "qty": 8,
+      "unitPrice": 136,
+      "discountPct": 0,
+      "sortOrder": 2
+    },
+    {
+      "id": "item-sk-eur-vat-on-4",
+      "name": "Design sprint phase 4",
+      "description": null,
+      "unit": "h",
+      "qty": 9,
+      "unitPrice": 144,
+      "discountPct": 0,
+      "sortOrder": 3
+    },
+    {
+      "id": "item-sk-eur-vat-on-5",
+      "name": "Implementation block 5",
+      "description": "Detailed planning, execution and stakeholder alignment.",
+      "unit": "day",
+      "qty": 1,
+      "unitPrice": 152,
+      "discountPct": 0,
+      "sortOrder": 4
+    },
+    {
+      "id": "item-sk-eur-vat-on-6",
+      "name": "Implementation block 6",
+      "description": null,
+      "unit": "h",
+      "qty": 6,
+      "unitPrice": 160,
+      "discountPct": 10,
+      "sortOrder": 5
+    },
+    {
+      "id": "item-sk-eur-vat-on-7",
+      "name": "Design sprint phase 7",
+      "description": "Detailed planning, execution and stakeholder alignment.",
+      "unit": "h",
+      "qty": 7,
+      "unitPrice": 168,
+      "discountPct": 0,
+      "sortOrder": 6
+    }
+  ],
+  "totals": {
+    "subtotal": 5580,
+    "totalDiscount": 446.4,
+    "taxableBase": 5133.6,
+    "vatAmount": 1026.72,
+    "grandTotal": 6160.32
+  },
+  "rendered": {
+    "metaChips": {
+      "createdAt": "14. 02. 2026",
+      "validUntil": "14. 03. 2026",
+      "currency": "EUR",
+      "vatStatus": "DPH 20.00%"
+    },
+    "itemRows": [
+      {
+        "id": "item-sk-eur-vat-on-1",
+        "qty": "1.00",
+        "unitPrice": "120,00 EUR",
+        "discount": "-10.00%",
+        "lineTotal": "108,00 EUR"
+      },
+      {
+        "id": "item-sk-eur-vat-on-2",
+        "qty": "7.00",
+        "unitPrice": "128,00 EUR",
+        "discount": "",
+        "lineTotal": "896,00 EUR"
+      },
+      {
+        "id": "item-sk-eur-vat-on-3",
+        "qty": "8.00",
+        "unitPrice": "136,00 EUR",
+        "discount": "",
+        "lineTotal": "1 088,00 EUR"
+      },
+      {
+        "id": "item-sk-eur-vat-on-4",
+        "qty": "9.00",
+        "unitPrice": "144,00 EUR",
+        "discount": "",
+        "lineTotal": "1 296,00 EUR"
+      },
+      {
+        "id": "item-sk-eur-vat-on-5",
+        "qty": "1.00",
+        "unitPrice": "152,00 EUR",
+        "discount": "",
+        "lineTotal": "152,00 EUR"
+      },
+      {
+        "id": "item-sk-eur-vat-on-6",
+        "qty": "6.00",
+        "unitPrice": "160,00 EUR",
+        "discount": "-10.00%",
+        "lineTotal": "864,00 EUR"
+      },
+      {
+        "id": "item-sk-eur-vat-on-7",
+        "qty": "7.00",
+        "unitPrice": "168,00 EUR",
+        "discount": "",
+        "lineTotal": "1 176,00 EUR"
+      }
+    ],
+    "totals": {
+      "subtotal": "5 580,00 EUR",
+      "totalDiscount": "446,40 EUR",
+      "vat": "1 026,72 EUR",
+      "grandTotal": "6 160,32 EUR"
+    },
+    "revisionLine": "V cene su zahrnute 2 kola revizii."
+  }
+}

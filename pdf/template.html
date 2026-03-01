@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="{{LANG_CODE}}">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{DOCUMENT_TITLE}}</title>
+    <style>
+{{INLINE_CSS}}
+    </style>
+  </head>
+  <body>
+    <main class="pdf-page {{PDF_CLASS_NAMES}}">
+      <header class="header">
+        <div class="brand-block">
+          {{LOGO_HTML}}
+        </div>
+        <div class="contact-block">
+          <p class="contact-line contact-line-strong company-contact-line">{{COMPANY_EMAIL}}</p>
+          <p class="contact-line contact-line-strong company-contact-line">{{COMPANY_PHONE}}</p>
+          <p class="contact-line contact-line-strong">{{DATE_LABEL}}: {{CREATED_AT}}</p>
+        </div>
+      </header>
+
+      <section class="title-block">
+        <h1 class="title">{{TITLE_LABEL}}</h1>
+        <p class="subtitle">{{QUOTE_SUBTITLE}}</p>
+      </section>
+
+      <section class="billing-row">
+        <article class="billing-card billing-card-client">
+          <h2 class="billing-title">{{CLIENT_CARD_TITLE}}</h2>
+          <div class="billing-lines">
+            {{CLIENT_LINES_HTML}}
+          </div>
+        </article>
+
+        <article class="billing-card billing-card-supplier">
+          <h2 class="billing-title">{{SUPPLIER_CARD_TITLE}}</h2>
+          <div class="billing-lines">
+            {{SUPPLIER_LINES_HTML}}
+          </div>
+        </article>
+      </section>
+
+      <section class="items-section">
+        {{ITEMS_TABLES_HTML}}
+      </section>
+
+      <section class="summary-total">
+        <div class="total-bar">
+          <div class="total-left">{{TOTAL_LABEL}}</div>
+          <div class="total-right">
+            <p class="grand-total">{{GRAND_TOTAL}}</p>
+            <p class="net-total total-meta">{{NET_TOTAL_LABEL}}: {{NET_TOTAL}}</p>
+            <p class="discount-total total-meta {{TOTAL_DISCOUNT_ROW_CLASS}}">
+              {{TOTAL_DISCOUNT_LABEL}}: -{{TOTAL_DISCOUNT}}
+            </p>
+            <p class="vat-total total-meta">{{VAT_TOTAL_LABEL}}: {{VAT_TOTAL}}</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="summary-notes">
+        <div class="notes">
+          <div class="notes-closing">
+            <h3 class="notes-title">{{NOTES_TITLE}}</h3>
+            {{TERMS_HTML}}
+          </div>
+        </div>
+
+        <footer class="footer-chip">
+          {{FOOTER_COMPANY_LINE}}
+        </footer>
+      </section>
+    </main>
+  </body>
+</html>

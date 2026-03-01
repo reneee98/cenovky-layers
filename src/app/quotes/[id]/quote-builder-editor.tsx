@@ -1,25 +1,43 @@
 "use client";
 
 import type { Language, QuoteStatus, TotalDiscountType } from "@prisma/client";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { ChevronUp, FileDown } from "lucide-react";
+import { toast } from "sonner";
 
-import { type CatalogPickerItem } from "@/components/catalog-picker";
-import { type ItemsTableRow, ItemsTable } from "@/components/items-table";
+import { AutosaveIndicator, type AutosaveState } from "@/components/quote/autosave-indicator";
+import type { CatalogPickerItem } from "@/components/quote/catalog-picker-dialog";
+import { ItemsTable, type QuoteItemRow, createEmptyItemRow } from "@/components/quote/items-table";
+import { MICROCOPY } from "@/components/quote/microcopy";
+import { QuoteHeaderBar } from "@/components/quote/quote-header-bar";
+import type { SnippetPickerItem } from "@/components/quote/snippet-picker";
+import { SnippetPicker } from "@/components/quote/snippet-picker";
+import { StatusDropdown } from "@/components/quote/status-dropdown";
+import { SummaryExportPanel } from "@/components/quote/summary-export-panel";
 import {
-  type SnippetPickerItem,
-  SnippetPicker,
-} from "@/components/snippet-picker";
-import { Badge } from "@/components/ui/badge";
-import { Toggle } from "@/components/ui/toggle";
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Textarea,
+} from "@/components/ui/shadcn";
 import { formatCurrency, formatTime } from "@/lib/format";
 import { QUOTE_ITEM_SECTION_MARKER } from "@/lib/quotes/items";
 import { calculateQuoteTotals } from "@/lib/quotes/totals";
-import {
-  formatQuoteStatus,
-  isQuoteStatus,
-  QUOTE_STATUS_OPTIONS,
-} from "@/lib/quotes/status";
-import { Select } from "@/components/ui/fields";
+import { QUOTE_STATUS_OPTIONS } from "@/lib/quotes/status";
 
 type ClientOption = {
   id: string;
@@ -33,6 +51,8 @@ type QuoteBuilderState = {
   currency: string;
   validUntil: string;
   vatEnabled: boolean;
+  showClientDetailsInPdf: boolean;
+  showCompanyDetailsInPdf: boolean;
   status: QuoteStatus;
   introContentMarkdown: string;
   termsContentMarkdown: string;
@@ -46,29 +66,15 @@ type QuoteBuilderEditorProps = {
   quoteId: string;
   quoteNumber: string;
   initialState: QuoteBuilderState;
-  initialItems: ItemsTableRow[];
+  initialItems: QuoteItemRow[];
   clients: ClientOption[];
   catalogItems: CatalogPickerItem[];
   snippets: SnippetPickerItem[];
   duplicateQuoteAction: (formData: FormData) => void | Promise<void>;
 };
 
-function createLocalId(): string {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    return crypto.randomUUID();
-  }
-
-  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-}
-
-function toNumber(value: string, fallback = 0): number {
-  const parsed = Number(value.replace(",", "."));
-  return Number.isFinite(parsed) ? parsed : fallback;
-}
-
 function toDateInputValue(value: string): string {
   const date = new Date(value);
-
   if (Number.isNaN(date.getTime())) {
     return new Date().toISOString().slice(0, 10);
   }
@@ -76,25 +82,23 @@ function toDateInputValue(value: string): string {
   return date.toISOString().slice(0, 10);
 }
 
-function isFiniteNumericInput(value: string): boolean {
-  if (value.trim().length === 0) {
-    return false;
-  }
-
-  return Number.isFinite(Number(value.replace(",", ".")));
+function toNumber(value: string, fallback = 0): number {
+  const parsed = Number(value.replace(",", "."));
+  return Number.isFinite(parsed) ? parsed : fallback;
 }
 
-function buildPayload(
-  state: QuoteBuilderState,
-  items: ItemsTableRow[],
-) {
+function buildPayload(state: QuoteBuilderState, items: QuoteItemRow[]) {
+  const validUntilIso = new Date(`${state.validUntil}T00:00:00.000Z`).toISOString();
+
   return {
     title: state.title,
     clientId: state.clientId,
     language: state.language,
-    currency: state.currency.toUpperCase(),
-    validUntil: state.validUntil,
+    currency: state.currency.trim().toUpperCase(),
+    validUntil: validUntilIso,
     vatEnabled: state.vatEnabled,
+    showClientDetailsInPdf: Boolean(state.showClientDetailsInPdf),
+    showCompanyDetailsInPdf: Boolean(state.showCompanyDetailsInPdf),
     status: state.status,
     introContentMarkdown: state.introContentMarkdown,
     termsContentMarkdown: state.termsContentMarkdown,
@@ -118,39 +122,6 @@ function buildPayload(
   };
 }
 
-function createEmptyItemRow(): ItemsTableRow {
-  return {
-    id: createLocalId(),
-    name: "",
-    unit: "h",
-    qty: "1",
-    unitPrice: "0",
-    discountPct: "0",
-    description: "",
-    isSection: false,
-  };
-}
-
-function getStatusTone(status: QuoteStatus): "neutral" | "accent" | "success" | "warning" | "danger" {
-  if (status === "accepted") {
-    return "success";
-  }
-
-  if (status === "rejected") {
-    return "danger";
-  }
-
-  if (status === "invoiced") {
-    return "warning";
-  }
-
-  if (status === "sent") {
-    return "accent";
-  }
-
-  return "neutral";
-}
-
 export function QuoteBuilderEditor({
   quoteId,
   quoteNumber,
@@ -161,25 +132,25 @@ export function QuoteBuilderEditor({
   snippets,
   duplicateQuoteAction,
 }: QuoteBuilderEditorProps) {
-  const [state, setState] = useState<QuoteBuilderState>(initialState);
-  const [items, setItems] = useState<ItemsTableRow[]>(
+  const [isPendingDuplicate, startDuplicateTransition] = useTransition();
+  const [state, setState] = useState<QuoteBuilderState>({
+    ...initialState,
+    validUntil: toDateInputValue(initialState.validUntil),
+  });
+  const [items, setItems] = useState<QuoteItemRow[]>(
     initialItems.length > 0 ? initialItems : [createEmptyItemRow()],
   );
-  const [autosaveStatus, setAutosaveStatus] = useState<"idle" | "saving" | "saved" | "error">(
-    "idle",
+  const [autosaveState, setAutosaveState] = useState<AutosaveState>("idle");
+  const [autosaveMessage, setAutosaveMessage] = useState(
+    MICROCOPY[initialState.language].autosave.savedNow,
   );
-  const [autosaveMessage, setAutosaveMessage] = useState("Ukladanie je aktivne.");
-  const [showIntroSnippetPicker, setShowIntroSnippetPicker] = useState(false);
-  const [showTermsSnippetPicker, setShowTermsSnippetPicker] = useState(false);
-  const [openSections, setOpenSections] = useState({
-    intro: true,
-    items: true,
-    revisions: false,
-    terms: false,
-  });
+  const [mobileSummaryOpen, setMobileSummaryOpen] = useState(false);
 
   const hasMountedRef = useRef(false);
   const latestRequestIdRef = useRef(0);
+
+  const copy = MICROCOPY[state.language];
+  const locale = state.language === "sk" ? "sk-SK" : "en-GB";
 
   const totals = useMemo(
     () =>
@@ -197,66 +168,23 @@ export function QuoteBuilderEditor({
     [items, state.totalDiscountType, state.totalDiscountValue, state.vatEnabled, state.vatRate],
   );
 
-  const statusTone = useMemo(() => getStatusTone(state.status), [state.status]);
-
-  const validationMessages = useMemo(() => {
-    const messages: string[] = [];
-
-    if (!state.title.trim()) {
-      messages.push("Nazov je povinny.");
-    }
-
-    if (!state.currency.trim()) {
-      messages.push("Mena je povinna.");
-    }
-
-    if (state.vatEnabled && !isFiniteNumericInput(state.vatRate)) {
-      messages.push("Sadzba DPH musi byt cislo.");
-    }
-
-    if (
-      state.totalDiscountType !== "none" &&
-      !isFiniteNumericInput(state.totalDiscountValue)
-    ) {
-      messages.push("Hodnota celkovej zlavy musi byt cislo.");
-    }
-
-    if (!items.some((item) => item.name.trim().length > 0)) {
-      messages.push("Pridaj aspon jednu polozku s nazvom.");
-    }
-
-    if (
-      items.some(
-        (item) =>
-          !item.isSection &&
-          (
-            !isFiniteNumericInput(item.qty) ||
-            !isFiniteNumericInput(item.unitPrice) ||
-            !isFiniteNumericInput(item.discountPct)
-          ),
-      )
-    ) {
-      messages.push("Mnozstvo, jednotkova cena a zlava musia byt cisla.");
-    }
-
-    return messages;
-  }, [items, state.currency, state.title, state.totalDiscountType, state.totalDiscountValue, state.vatEnabled, state.vatRate]);
-
   const payload = useMemo(() => buildPayload(state, items), [items, state]);
 
-  useEffect(() => {
-    if (!hasMountedRef.current) {
-      hasMountedRef.current = true;
-      return;
-    }
+  const statusOptions = useMemo(
+    () =>
+      QUOTE_STATUS_OPTIONS.map((status) => ({
+        value: status,
+        label: copy.statuses[status],
+      })),
+    [copy.statuses],
+  );
 
-    const requestId = latestRequestIdRef.current + 1;
-    latestRequestIdRef.current = requestId;
-    const controller = new AbortController();
-
-    const timeoutId = window.setTimeout(async () => {
-      setAutosaveStatus("saving");
-      setAutosaveMessage("Uklada sa...");
+  const persist = useCallback(
+    async (source: "auto" | "manual") => {
+      const requestId = latestRequestIdRef.current + 1;
+      latestRequestIdRef.current = requestId;
+      setAutosaveState("saving");
+      setAutosaveMessage(copy.autosave.saving);
 
       try {
         const response = await fetch(`/api/quotes/${quoteId}/autosave`, {
@@ -265,415 +193,456 @@ export function QuoteBuilderEditor({
             "Content-Type": "application/json",
           },
           body: JSON.stringify(payload),
-          signal: controller.signal,
         });
 
         if (!response.ok) {
-          throw new Error("Automaticke ulozenie zlyhalo.");
+          throw new Error("Autosave failed.");
         }
 
         const result = (await response.json()) as { updatedAt?: string };
-
-        if (latestRequestIdRef.current === requestId) {
-          setAutosaveStatus("saved");
-          setAutosaveMessage(
-            result.updatedAt
-              ? `Ulozene • ${formatTime(result.updatedAt)}`
-              : "Ulozene • prave teraz",
-          );
-        }
-      } catch (error) {
-        if ((error as Error).name === "AbortError") {
+        if (latestRequestIdRef.current !== requestId) {
           return;
         }
 
-        if (latestRequestIdRef.current === requestId) {
-          setAutosaveStatus("error");
-          setAutosaveMessage("Automaticke ulozenie zlyhalo.");
+        setAutosaveState("saved");
+        setAutosaveMessage(
+          result.updatedAt
+            ? `${copy.autosave.savedNow.split("•")[0].trim()} • ${formatTime(result.updatedAt, locale)}`
+            : copy.autosave.savedNow,
+        );
+
+        if (source === "manual") {
+          toast.success(copy.autosave.savedNow);
+        }
+      } catch {
+        if (latestRequestIdRef.current !== requestId) {
+          return;
+        }
+        setAutosaveState("error");
+        setAutosaveMessage(copy.autosave.error);
+        if (source === "manual") {
+          toast.error(copy.autosave.error);
         }
       }
+    },
+    [copy.autosave.error, copy.autosave.savedNow, copy.autosave.saving, locale, payload, quoteId],
+  );
+
+  useEffect(() => {
+    if (!hasMountedRef.current) {
+      hasMountedRef.current = true;
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      void persist("auto");
     }, 700);
 
     return () => {
       window.clearTimeout(timeoutId);
-      controller.abort();
     };
-  }, [payload, quoteId]);
+  }, [payload, persist]);
 
-  const toggleSection = (section: keyof typeof openSections) => {
-    setOpenSections((current) => ({ ...current, [section]: !current[section] }));
+  const triggerDuplicate = () => {
+    if (!window.confirm(copy.confirmations.duplicate)) {
+      return;
+    }
+
+    const formData = new FormData();
+    formData.set("quote_id", quoteId);
+    startDuplicateTransition(() => {
+      void duplicateQuoteAction(formData);
+    });
   };
 
+  const introSection = (
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between gap-2">
+          <CardTitle className="text-base">{copy.labels.intro}</CardTitle>
+          <SnippetPicker
+            snippets={snippets}
+            type="intro"
+            language={state.language}
+            triggerLabel={copy.actions.insertSnippet}
+            emptyLabel={copy.labels.noSnippets}
+            searchPlaceholder={copy.labels.searchSnippetsPlaceholder}
+            onSelect={(snippet) =>
+              setState((current) => ({ ...current, introContentMarkdown: snippet.contentMarkdown }))
+            }
+          />
+        </div>
+      </CardHeader>
+      <CardContent>
+        <Textarea
+          rows={6}
+          value={state.introContentMarkdown}
+          onChange={(event) =>
+            setState((current) => ({ ...current, introContentMarkdown: event.target.value }))
+          }
+          placeholder={copy.labels.intro}
+        />
+      </CardContent>
+    </Card>
+  );
+
+  const itemsSection = (
+    <ItemsTable
+      currency={state.currency}
+      locale={locale}
+      items={items}
+      catalogItems={catalogItems}
+      totalDiscountType={state.totalDiscountType}
+      totalDiscountValue={state.totalDiscountValue}
+      totals={totals}
+      labels={{
+        heading: copy.labels.items,
+        addItem: copy.actions.addItem,
+        addSection: copy.actions.addSection,
+        addFromCatalog: copy.actions.addFromCatalog,
+        addAndAnother: copy.actions.addAndAnother,
+        noItemsTitle: copy.empty.noItemsTitle,
+        noItemsDescription: copy.empty.noItemsDescription,
+        totalDiscountPct: copy.labels.totalDiscountPct,
+        totalDiscountAmount: copy.labels.totalDiscountAmount,
+        discount: copy.labels.discount,
+        name: copy.labels.name,
+        unit: copy.labels.unit,
+        qty: copy.labels.qty,
+        unitPrice: copy.labels.unitPrice,
+        lineTotal: copy.labels.lineTotal,
+        section: copy.labels.section,
+        item: copy.labels.item,
+        sectionTitle: copy.labels.sectionTitle,
+        itemName: copy.labels.itemName,
+        sectionHint: copy.labels.sectionHint,
+        noTotalDiscount: copy.labels.noTotalDiscount,
+        subtotal: copy.labels.subtotal,
+        vat: copy.labels.vat,
+        grandTotal: copy.labels.grandTotal,
+        searchCatalogPlaceholder: copy.labels.searchCatalogPlaceholder,
+        catalogDescription: copy.labels.catalogDescription,
+        allCategories: copy.labels.allCategories,
+        noCatalogItems: copy.labels.noCatalogItems,
+        category: copy.labels.category,
+        deleteRow: copy.labels.deleteRow,
+        dragRow: copy.labels.dragRow,
+        editDescription: copy.labels.editDescription,
+        hideDescription: copy.labels.hideDescription,
+        descriptionPlaceholder: copy.labels.descriptionPlaceholder,
+        descriptionHint: copy.labels.descriptionHint,
+      }}
+      onItemsChange={setItems}
+      onTotalDiscountTypeChange={(value) =>
+        setState((current) => ({ ...current, totalDiscountType: value }))
+      }
+      onTotalDiscountValueChange={(value) =>
+        setState((current) => ({ ...current, totalDiscountValue: value }))
+      }
+    />
+  );
+
+  const revisionsSection = (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base">{copy.labels.revisions}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <Select
+          value={String(state.revisionsIncluded)}
+          onValueChange={(value) =>
+            setState((current) => ({
+              ...current,
+              revisionsIncluded: Math.max(1, Math.min(3, Number(value))),
+            }))
+          }
+        >
+          <SelectTrigger className="max-w-[180px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="1">1</SelectItem>
+            <SelectItem value="2">2</SelectItem>
+            <SelectItem value="3">3</SelectItem>
+          </SelectContent>
+        </Select>
+      </CardContent>
+    </Card>
+  );
+
+  const termsSection = (
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between gap-2">
+          <CardTitle className="text-base">{copy.labels.terms}</CardTitle>
+          <SnippetPicker
+            snippets={snippets}
+            type="terms"
+            language={state.language}
+            triggerLabel={copy.actions.insertSnippet}
+            emptyLabel={copy.labels.noSnippets}
+            searchPlaceholder={copy.labels.searchSnippetsPlaceholder}
+            onSelect={(snippet) =>
+              setState((current) => ({ ...current, termsContentMarkdown: snippet.contentMarkdown }))
+            }
+          />
+        </div>
+      </CardHeader>
+      <CardContent>
+        <Textarea
+          rows={6}
+          value={state.termsContentMarkdown}
+          onChange={(event) =>
+            setState((current) => ({ ...current, termsContentMarkdown: event.target.value }))
+          }
+          placeholder={copy.labels.terms}
+        />
+      </CardContent>
+    </Card>
+  );
+
   return (
-    <div className="quote-editor-layout">
-      <div className="quote-editor-main">
-        <section className="ui-page-section quote-editor-hero">
-          <div className="quote-editor-hero__top">
-            <div className="flex items-center gap-2">
-              <span className="quote-editor-quote-number">{quoteNumber}</span>
-              <Badge tone={statusTone}>{formatQuoteStatus(state.status)}</Badge>
+    <div className="min-h-screen pb-28 lg:pb-10">
+      <QuoteHeaderBar
+        quoteNumber={quoteNumber}
+        title={state.title}
+        clientId={state.clientId}
+        clients={clients}
+        language={state.language}
+        currency={state.currency}
+        validUntil={state.validUntil}
+        vatEnabled={state.vatEnabled}
+        vatRate={state.vatRate}
+        showClientDetailsInPdf={state.showClientDetailsInPdf}
+        showCompanyDetailsInPdf={state.showCompanyDetailsInPdf}
+        labels={{
+          title: copy.labels.title,
+          client: copy.labels.client,
+          language: copy.labels.language,
+          currency: copy.labels.currency,
+          validUntil: copy.labels.validUntil,
+          showClientInPdf: copy.labels.showClientInPdf,
+          showCompanyInPdf: copy.labels.showCompanyInPdf,
+          vatOn: copy.labels.vatOn,
+          vatOff: copy.labels.vatOff,
+          vatRate: copy.labels.vatRate,
+        }}
+        autosave={{
+          state: autosaveState,
+          message: autosaveMessage,
+        }}
+        onTitleChange={(value) => setState((current) => ({ ...current, title: value }))}
+        onClientChange={(value) => setState((current) => ({ ...current, clientId: value }))}
+        onLanguageChange={(value) => setState((current) => ({ ...current, language: value }))}
+        onCurrencyChange={(value) => setState((current) => ({ ...current, currency: value }))}
+        onValidUntilChange={(value) => setState((current) => ({ ...current, validUntil: value }))}
+        onVatEnabledChange={(value) => setState((current) => ({ ...current, vatEnabled: value }))}
+        onVatRateChange={(value) => setState((current) => ({ ...current, vatRate: value }))}
+        onShowClientDetailsInPdfChange={(value) =>
+          setState((current) => ({ ...current, showClientDetailsInPdf: value }))
+        }
+        onShowCompanyDetailsInPdfChange={(value) =>
+          setState((current) => ({ ...current, showCompanyDetailsInPdf: value }))
+        }
+        onDuplicate={triggerDuplicate}
+        duplicateLabel={copy.actions.duplicate}
+        duplicatePending={isPendingDuplicate}
+      />
+
+      <div className="w-full py-4 md:py-6">
+        <div className="mb-4 hidden md:block lg:hidden">
+          <SummaryExportPanel
+            quoteId={quoteId}
+            language={state.language}
+            currency={state.currency}
+            total={{
+              subtotal: totals.subtotal,
+              discount: totals.totalDiscount,
+              vat: totals.vatAmount,
+              grandTotal: totals.grandTotal,
+              vatEnabled: state.vatEnabled,
+              vatRate: state.vatRate,
+            }}
+            labels={{
+              heading: copy.labels.summary,
+              status: copy.labels.status,
+              exportPdf: copy.actions.exportPdf,
+              save: copy.actions.save,
+              vatOn: copy.labels.vatOn,
+              vatOff: copy.labels.vatOff,
+              subtotal: copy.labels.subtotal,
+              discount: copy.labels.discount,
+              vat: copy.labels.vat,
+              grandTotal: copy.labels.grandTotal,
+            }}
+            status={state.status}
+            statusLabel={copy.statuses[state.status]}
+            statuses={statusOptions}
+            onStatusChange={(value) =>
+              setState((current) => ({ ...current, status: value as QuoteStatus }))
+            }
+            onSaveNow={() => {
+              void persist("manual");
+            }}
+          />
+        </div>
+
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px] xl:grid-cols-[minmax(0,1fr)_420px]">
+          <div className="space-y-5">
+            <div className="hidden gap-5 md:grid">
+              {introSection}
+              {itemsSection}
+              {revisionsSection}
+              {termsSection}
             </div>
-            <span
-              className={`quote-editor-autosave ${
-                autosaveStatus === "error"
-                  ? "text-red-700"
-                  : autosaveStatus === "saved"
-                    ? "text-emerald-700"
-                    : "text-[var(--color-gray-500)]"
-              }`}
+
+            <Accordion
+              type="multiple"
+              defaultValue={["intro", "items", "revisions", "terms"]}
+              className="overflow-hidden rounded-2xl border border-slate-200 bg-white md:hidden"
             >
-              {autosaveMessage}
-            </span>
+              <AccordionItem value="intro">
+                <AccordionTrigger className="px-4">{copy.labels.intro}</AccordionTrigger>
+                <AccordionContent className="px-4 pb-4">{introSection}</AccordionContent>
+              </AccordionItem>
+              <AccordionItem value="items">
+                <AccordionTrigger className="px-4">{copy.labels.items}</AccordionTrigger>
+                <AccordionContent className="px-4 pb-4">{itemsSection}</AccordionContent>
+              </AccordionItem>
+              <AccordionItem value="revisions">
+                <AccordionTrigger className="px-4">{copy.labels.revisions}</AccordionTrigger>
+                <AccordionContent className="px-4 pb-4">{revisionsSection}</AccordionContent>
+              </AccordionItem>
+              <AccordionItem value="terms">
+                <AccordionTrigger className="px-4">{copy.labels.terms}</AccordionTrigger>
+                <AccordionContent className="px-4 pb-4">{termsSection}</AccordionContent>
+              </AccordionItem>
+            </Accordion>
           </div>
 
-          <label className="block text-sm text-[var(--color-gray-600)]">
-            Nazov ponuky
-            <input
-              value={state.title}
-              onChange={(event) => {
-                setState((current) => ({ ...current, title: event.target.value }));
-              }}
-              placeholder="Nazov ponuky"
-              className="quote-editor-title-input"
-            />
-          </label>
-
-          <div className="quote-editor-meta-grid">
-            <label className="text-sm text-[var(--color-gray-700)]">
-              Klient
-              <Select
-                value={state.clientId}
-                onChange={(event) => {
-                  setState((current) => ({ ...current, clientId: event.target.value }));
+          <aside className="hidden lg:block lg:pl-1">
+            <div className="sticky top-[170px]">
+              <SummaryExportPanel
+                quoteId={quoteId}
+                language={state.language}
+                currency={state.currency}
+                total={{
+                  subtotal: totals.subtotal,
+                  discount: totals.totalDiscount,
+                  vat: totals.vatAmount,
+                  grandTotal: totals.grandTotal,
+                  vatEnabled: state.vatEnabled,
+                  vatRate: state.vatRate,
                 }}
-                className="mt-1 text-sm"
-              >
-                {clients.map((client) => (
-                  <option key={client.id} value={client.id}>
-                    {client.name}
-                  </option>
-                ))}
-              </Select>
-            </label>
-
-            <label className="text-sm text-[var(--color-gray-700)]">
-              Jazyk
-              <Select
-                value={state.language}
-                onChange={(event) => {
-                  const value = event.target.value;
-
-                  if (value === "sk" || value === "en") {
-                    setState((current) => ({ ...current, language: value }));
-                  }
+                labels={{
+                  heading: copy.labels.summary,
+                  status: copy.labels.status,
+                  exportPdf: copy.actions.exportPdf,
+                  save: copy.actions.save,
+                  vatOn: copy.labels.vatOn,
+                  vatOff: copy.labels.vatOff,
+                  subtotal: copy.labels.subtotal,
+                  discount: copy.labels.discount,
+                  vat: copy.labels.vat,
+                  grandTotal: copy.labels.grandTotal,
                 }}
-                className="mt-1 text-sm"
-              >
-                <option value="sk">SK</option>
-                <option value="en">EN</option>
-              </Select>
-            </label>
-
-            <label className="text-sm text-[var(--color-gray-700)]">
-              Mena
-              <input
-                value={state.currency}
-                onChange={(event) => {
-                  setState((current) => ({ ...current, currency: event.target.value.toUpperCase() }));
+                status={state.status}
+                statusLabel={copy.statuses[state.status]}
+                statuses={statusOptions}
+                onStatusChange={(value) =>
+                  setState((current) => ({ ...current, status: value as QuoteStatus }))
+                }
+                onSaveNow={() => {
+                  void persist("manual");
                 }}
-                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm uppercase"
               />
-            </label>
-
-            <label className="text-sm text-[var(--color-gray-700)]">
-              Platna do
-              <input
-                type="date"
-                value={toDateInputValue(state.validUntil)}
-                onChange={(event) => {
-                  const nextValue = event.target.value;
-
-                  setState((current) => ({
-                    ...current,
-                    validUntil: nextValue ? `${nextValue}T00:00:00.000Z` : current.validUntil,
-                  }));
-                }}
-                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-              />
-            </label>
-          </div>
-
-          <div className="mt-4 inline-flex items-center gap-3 text-sm text-[var(--color-gray-700)]">
-            <Toggle
-              checked={state.vatEnabled}
-              aria-label="DPH zapnuta"
-              onCheckedChange={(checked) => {
-                setState((current) => ({ ...current, vatEnabled: checked }));
-              }}
-            />
-            <span>DPH zapnuta</span>
-          </div>
-
-          {validationMessages.length > 0 ? (
-            <div className="quote-editor-validation">
-              <p className="font-medium">Validacia</p>
-              <ul className="mt-2 list-disc space-y-1 pl-5">
-                {validationMessages.map((message) => (
-                  <li key={message}>{message}</li>
-                ))}
-              </ul>
             </div>
-          ) : null}
-        </section>
-
-        <section className="ui-page-section quote-editor-section">
-          <div className="quote-editor-section-head">
-            <h2 className="text-sm font-semibold text-slate-900">Intro</h2>
-            <div className="quote-editor-section-actions">
-              <button
-                type="button"
-                className="quote-editor-ghost-action"
-                onClick={() => setShowIntroSnippetPicker((current) => !current)}
-              >
-                {showIntroSnippetPicker ? "Skryt sablony" : "Insert snippet"}
-              </button>
-              <button
-                type="button"
-                className="builder-section-toggle lg:hidden"
-                onClick={() => toggleSection("intro")}
-                aria-expanded={openSections.intro}
-              >
-                {openSections.intro ? "Skryt" : "Otvorit"}
-              </button>
-            </div>
-          </div>
-
-          <div className={openSections.intro ? "mt-4" : "mt-4 hidden lg:block"}>
-            <textarea
-              rows={6}
-              value={state.introContentMarkdown}
-              onChange={(event) => {
-                setState((current) => ({ ...current, introContentMarkdown: event.target.value }));
-              }}
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-              placeholder="Text uvodu"
-            />
-
-            {showIntroSnippetPicker ? (
-              <SnippetPicker
-                title="Vyber sablony uvodu"
-                snippets={snippets}
-                fixedType="intro"
-                fixedLanguage={state.language}
-                onSelect={(snippet) => {
-                  setState((current) => ({
-                    ...current,
-                    introContentMarkdown: snippet.contentMarkdown,
-                  }));
-                  setShowIntroSnippetPicker(false);
-                }}
-                className="mt-3"
-              />
-            ) : null}
-          </div>
-        </section>
-
-        <section className="ui-page-section quote-editor-section">
-          <div className="quote-editor-section-head">
-            <h2 className="text-sm font-semibold text-slate-900">Items</h2>
-            <div className="quote-editor-section-actions">
-              <button
-                type="button"
-                className="builder-section-toggle lg:hidden"
-                onClick={() => toggleSection("items")}
-                aria-expanded={openSections.items}
-              >
-                {openSections.items ? "Skryt" : "Otvorit"}
-              </button>
-            </div>
-          </div>
-
-          <div className={openSections.items ? "mt-4" : "mt-4 hidden lg:block"}>
-            <p className="mb-2 text-xs text-[var(--color-gray-500)]">
-              Klikni na bunku pre upravu. Enter posunie kurzor o riadok nizsie, Tab na dalsiu bunku. Riadky mozes presuvat tahanim za ikonku.
-            </p>
-
-            <ItemsTable
-              currency={state.currency}
-              items={items}
-              catalogItems={catalogItems}
-              totalDiscountType={state.totalDiscountType}
-              totalDiscountValue={state.totalDiscountValue}
-              totals={totals}
-              onItemsChange={(nextItems) => {
-                setItems(nextItems);
-              }}
-              onTotalDiscountTypeChange={(value) => {
-                setState((current) => ({ ...current, totalDiscountType: value }));
-              }}
-              onTotalDiscountValueChange={(value) => {
-                setState((current) => ({ ...current, totalDiscountValue: value }));
-              }}
-            />
-          </div>
-        </section>
-
-        <section className="ui-page-section quote-editor-section">
-          <div className="quote-editor-section-head">
-            <h2 className="text-sm font-semibold text-slate-900">Revisions</h2>
-            <button
-              type="button"
-              className="builder-section-toggle lg:hidden"
-              onClick={() => toggleSection("revisions")}
-              aria-expanded={openSections.revisions}
-            >
-              {openSections.revisions ? "Skryt" : "Otvorit"}
-            </button>
-          </div>
-
-          <div className={openSections.revisions ? "mt-4" : "mt-4 hidden lg:block"}>
-            <label className="block text-sm text-slate-700">
-              Pocet kol revizii v cene
-              <Select
-                value={String(state.revisionsIncluded)}
-                onChange={(event) => {
-                  const nextValue = Number(event.target.value);
-                  setState((current) => ({
-                    ...current,
-                    revisionsIncluded: Math.max(1, Math.min(3, nextValue)),
-                  }));
-                }}
-                className="mt-1 w-full max-w-xs text-sm"
-              >
-                <option value="1">1</option>
-                <option value="2">2</option>
-                <option value="3">3</option>
-              </Select>
-            </label>
-          </div>
-        </section>
-
-        <section className="ui-page-section quote-editor-section">
-          <div className="quote-editor-section-head">
-            <h2 className="text-sm font-semibold text-slate-900">Terms</h2>
-            <div className="quote-editor-section-actions">
-              <button
-                type="button"
-                className="quote-editor-ghost-action"
-                onClick={() => setShowTermsSnippetPicker((current) => !current)}
-              >
-                {showTermsSnippetPicker ? "Skryt sablony" : "Insert snippet"}
-              </button>
-              <button
-                type="button"
-                className="builder-section-toggle lg:hidden"
-                onClick={() => toggleSection("terms")}
-                aria-expanded={openSections.terms}
-              >
-                {openSections.terms ? "Skryt" : "Otvorit"}
-              </button>
-            </div>
-          </div>
-
-          <div className={openSections.terms ? "mt-4" : "mt-4 hidden lg:block"}>
-            <textarea
-              rows={6}
-              value={state.termsContentMarkdown}
-              onChange={(event) => {
-                setState((current) => ({ ...current, termsContentMarkdown: event.target.value }));
-              }}
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-              placeholder="Podmienky"
-            />
-
-            {showTermsSnippetPicker ? (
-              <SnippetPicker
-                title="Vyber sablony podmienok"
-                snippets={snippets}
-                fixedType="terms"
-                fixedLanguage={state.language}
-                onSelect={(snippet) => {
-                  setState((current) => ({
-                    ...current,
-                    termsContentMarkdown: snippet.contentMarkdown,
-                  }));
-                  setShowTermsSnippetPicker(false);
-                }}
-                className="mt-3"
-              />
-            ) : null}
-          </div>
-        </section>
+          </aside>
+        </div>
       </div>
 
-      <aside className="quote-editor-sidebar">
-        <section className="ui-page-section quote-summary-panel">
-          <h2 className="text-sm font-semibold text-slate-900">Summary & Export</h2>
-          <p className="mt-2 text-sm text-slate-600">
-            Minimalny ovladaci panel pre stav, sumy a export PDF.
-          </p>
-
-          <label className="mt-4 block text-sm text-slate-700">
-            Stav ponuky
-            <Select
-              value={state.status}
-              onChange={(event) => {
-                const value = event.target.value;
-
-                if (isQuoteStatus(value)) {
-                  setState((current) => ({ ...current, status: value as QuoteStatus }));
-                }
-              }}
-              className="mt-1 text-sm"
-            >
-              {QUOTE_STATUS_OPTIONS.map((status) => (
-                <option key={status} value={status}>
-                  {formatQuoteStatus(status)}
-                </option>
-              ))}
-            </Select>
-          </label>
-
-          <dl className="quote-summary-totals mt-4">
-            <div>
-              <dt>Medzisucet</dt>
-              <dd>{formatCurrency(totals.subtotal, state.currency)}</dd>
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 p-3 backdrop-blur lg:hidden">
+        <div className="flex w-full items-center gap-2">
+          <Collapsible open={mobileSummaryOpen} onOpenChange={setMobileSummaryOpen} className="w-full">
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-xs text-slate-500">{copy.labels.summary}</p>
+                <p className="truncate text-sm font-semibold text-slate-900">
+                  {formatCurrency(totals.grandTotal, state.currency, locale)}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => {
+                    void persist("manual");
+                  }}
+                >
+                  {copy.actions.save}
+                </Button>
+                <Button asChild size="sm" variant="accent">
+                  <a href={`/api/quotes/${quoteId}/download`}>
+                    <FileDown className="mr-1.5 h-4 w-4" />
+                    {copy.actions.exportPdf}
+                  </a>
+                </Button>
+                <CollapsibleTrigger asChild>
+                  <Button size="icon" variant="secondary" className="h-9 w-9">
+                    <ChevronUp
+                      className={`h-4 w-4 transition-transform duration-200 ${
+                        mobileSummaryOpen ? "" : "rotate-180"
+                      }`}
+                    />
+                  </Button>
+                </CollapsibleTrigger>
+              </div>
             </div>
-            <div>
-              <dt>Zlava</dt>
-              <dd>-{formatCurrency(totals.totalDiscount, state.currency)}</dd>
-            </div>
-            <div>
-              <dt>DPH</dt>
-              <dd>{formatCurrency(totals.vatAmount, state.currency)}</dd>
-            </div>
-            <div className="quote-summary-totals__grand">
-              <dt>Spolu</dt>
-              <dd>{formatCurrency(totals.grandTotal, state.currency)}</dd>
-            </div>
-          </dl>
-
-          <a
-            href={`/api/quotes/${quoteId}/download`}
-            className="mt-4 inline-flex w-full items-center justify-center rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-700"
-          >
-            Export PDF
-          </a>
-
-          <details className="quote-editor-more mt-4">
-            <summary>More</summary>
-            <form action={duplicateQuoteAction} className="mt-3">
-              <input type="hidden" name="quote_id" value={quoteId} />
-              <button
-                type="submit"
-                className="inline-flex w-full items-center justify-center rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
-              >
-                Duplikovat ponuku
-              </button>
-            </form>
-          </details>
-        </section>
-      </aside>
+            <CollapsibleContent className="mt-3">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <AutosaveIndicator state={autosaveState} message={autosaveMessage} />
+                <div className="mt-3 space-y-2 text-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-500">{copy.labels.subtotal}</span>
+                    <span className="font-medium text-slate-900">
+                      {formatCurrency(totals.subtotal, state.currency, locale)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-500">{copy.labels.discount}</span>
+                    <span className="font-medium text-slate-900">
+                      -{formatCurrency(totals.totalDiscount, state.currency, locale)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-500">{copy.labels.vat}</span>
+                    <span className="font-medium text-slate-900">
+                      {formatCurrency(totals.vatAmount, state.currency, locale)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between border-t border-slate-200 pt-2">
+                    <span className="font-semibold text-slate-900">{copy.labels.grandTotal}</span>
+                    <span className="font-semibold text-slate-900">
+                      {formatCurrency(totals.grandTotal, state.currency, locale)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between pt-1">
+                    <span className="text-slate-500">{copy.labels.status}</span>
+                    <StatusDropdown
+                      status={state.status}
+                      statusLabel={copy.statuses[state.status]}
+                      options={statusOptions}
+                      onChange={(value) =>
+                        setState((current) => ({ ...current, status: value as QuoteStatus }))
+                      }
+                    />
+                  </div>
+                </div>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        </div>
+      </div>
     </div>
   );
 }

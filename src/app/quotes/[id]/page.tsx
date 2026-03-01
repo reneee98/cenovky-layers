@@ -52,12 +52,6 @@ export default async function QuoteBuilderPage({ params, searchParams }: QuoteBu
       headerActions={
         <div className="flex w-full flex-wrap justify-end gap-2 sm:w-auto">
           <Link
-            href="/settings"
-            className="ui-btn ui-btn--secondary ui-btn--md w-full sm:w-auto"
-          >
-            Nastavenia firmy
-          </Link>
-          <Link
             href="/quotes"
             className="ui-btn ui-btn--secondary ui-btn--md w-full sm:w-auto"
           >
@@ -99,6 +93,8 @@ export default async function QuoteBuilderPage({ params, searchParams }: QuoteBu
           currency: quote.currency,
           validUntil: quote.validUntil.toISOString(),
           vatEnabled: quote.vatEnabled,
+          showClientDetailsInPdf: quote.showClientDetailsInPdf ?? true,
+          showCompanyDetailsInPdf: quote.showCompanyDetailsInPdf ?? true,
           status: quote.status,
           introContentMarkdown: quote.introContentMarkdown,
           termsContentMarkdown: quote.termsContentMarkdown,

@@ -72,6 +72,8 @@ export async function createDraftQuoteAction(formData: FormData): Promise<void> 
       validUntil,
       vatEnabled: quoteVatEnabled,
       vatRate: settings.vatRate,
+      showClientDetailsInPdf: true,
+      showCompanyDetailsInPdf: true,
       introContentMarkdown,
       termsContentMarkdown,
       revisionsIncluded: 1,

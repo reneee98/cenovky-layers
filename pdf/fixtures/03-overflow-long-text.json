@@ -1,0 +1,552 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-02-14T12:00:00.000Z",
+  "company": {
+    "companyName": "Studio North s.r.o.",
+    "companyAddress": "Sancova 12, 811 04 Bratislava",
+    "companyIco": "56006420",
+    "companyDic": "2122163384",
+    "companyIcdph": "SK2122163384",
+    "companyEmail": "hello@studionorth.sk",
+    "companyPhone": "+421 900 100 200",
+    "companyWebsite": "www.studionorth.sk",
+    "logoUrl": null,
+    "logoImage": null
+  },
+  "quote": {
+    "id": "quote-long-pagination",
+    "number": "2026-022",
+    "title": "Veľmi dlhý názov ponuky na komplexný redesign digitálneho produktu a následný vývoj platformy",
+    "status": "draft",
+    "language": "en",
+    "currency": "EUR",
+    "validUntil": "2026-03-14T00:00:00.000Z",
+    "vatEnabled": true,
+    "vatRate": 20,
+    "introContentMarkdown": "Thank you for your trust. Below is a structured proposal prepared for a fast project kickoff.",
+    "termsContentMarkdown": "The quote is valid for 30 days. Billing is milestone-based according to the delivery timeline.",
+    "revisionsIncluded": 2,
+    "totalDiscountType": "pct",
+    "totalDiscountValue": 5,
+    "createdAt": "2026-02-14T12:00:00.000Z",
+    "updatedAt": "2026-02-14T12:00:00.000Z"
+  },
+  "client": {
+    "id": "client-long-pagination",
+    "type": "company",
+    "name": "Fokus Studio spol. s r.o. s veľmi dlhým obchodným názvom pre test zalamovania",
+    "billingAddressLine1": "Hviezdoslavova 1322/11A, Administratívne centrum severné krídlo, 4. poschodie",
+    "billingAddressLine2": "Vchod B, kancelária 408, Dlhý názov lokality pre overflow test",
+    "city": "San Francisco",
+    "zip": "94105",
+    "country": "United States",
+    "ico": "51234567",
+    "dic": "2120123456",
+    "icdph": "SK2120123456",
+    "contactName": "Alexandra Montgomery",
+    "contactEmail": "alexandra.montgomery@global-commerce.example",
+    "contactPhone": "+1 415 555 0178"
+  },
+  "items": [
+    {
+      "id": "item-long-pagination-1",
+      "name": "Design sprint phase 1 - rozšírený popis položky pre test zalamovania názvu v tabuľke",
+      "description": "Rovnaká šablóna pri oboch variantoch a doplňujúce poznámky k implementácii.",
+      "unit": "day",
+      "qty": 1,
+      "unitPrice": 120,
+      "discountPct": 10,
+      "sortOrder": 0
+    },
+    {
+      "id": "item-long-pagination-2",
+      "name": "Implementation block 2",
+      "description": null,
+      "unit": "h",
+      "qty": 7,
+      "unitPrice": 128,
+      "discountPct": 0,
+      "sortOrder": 1
+    },
+    {
+      "id": "item-long-pagination-3",
+      "name": "Implementation block 3 - rozšírený popis položky pre test zalamovania názvu v tabuľke",
+      "description": "Detailed planning, execution and stakeholder alignment.",
+      "unit": "h",
+      "qty": 8,
+      "unitPrice": 136,
+      "discountPct": 0,
+      "sortOrder": 2
+    },
+    {
+      "id": "item-long-pagination-4",
+      "name": "Design sprint phase 4",
+      "description": "Rovnaká šablóna pri oboch variantoch a doplňujúce poznámky k implementácii.",
+      "unit": "h",
+      "qty": 9,
+      "unitPrice": 144,
+      "discountPct": 0,
+      "sortOrder": 3
+    },
+    {
+      "id": "item-long-pagination-5",
+      "name": "Implementation block 5 - rozšírený popis položky pre test zalamovania názvu v tabuľke",
+      "description": "Detailed planning, execution and stakeholder alignment.",
+      "unit": "day",
+      "qty": 1,
+      "unitPrice": 152,
+      "discountPct": 0,
+      "sortOrder": 4
+    },
+    {
+      "id": "item-long-pagination-6",
+      "name": "Implementation block 6",
+      "description": null,
+      "unit": "h",
+      "qty": 6,
+      "unitPrice": 160,
+      "discountPct": 10,
+      "sortOrder": 5
+    },
+    {
+      "id": "item-long-pagination-7",
+      "name": "Design sprint phase 7 - rozšírený popis položky pre test zalamovania názvu v tabuľke",
+      "description": "Rovnaká šablóna pri oboch variantoch a doplňujúce poznámky k implementácii.",
+      "unit": "h",
+      "qty": 7,
+      "unitPrice": 168,
+      "discountPct": 0,
+      "sortOrder": 6
+    },
+    {
+      "id": "item-long-pagination-8",
+      "name": "Implementation block 8",
+      "description": null,
+      "unit": "h",
+      "qty": 8,
+      "unitPrice": 176,
+      "discountPct": 0,
+      "sortOrder": 7
+    },
+    {
+      "id": "item-long-pagination-9",
+      "name": "Implementation block 9 - rozšírený popis položky pre test zalamovania názvu v tabuľke",
+      "description": "Detailed planning, execution and stakeholder alignment.",
+      "unit": "day",
+      "qty": 1,
+      "unitPrice": 184,
+      "discountPct": 0,
+      "sortOrder": 8
+    },
+    {
+      "id": "item-long-pagination-10",
+      "name": "Design sprint phase 10",
+      "description": "Rovnaká šablóna pri oboch variantoch a doplňujúce poznámky k implementácii.",
+      "unit": "h",
+      "qty": 10,
+      "unitPrice": 192,
+      "discountPct": 0,
+      "sortOrder": 9
+    },
+    {
+      "id": "item-long-pagination-11",
+      "name": "Implementation block 11 - rozšírený popis položky pre test zalamovania názvu v tabuľke",
+      "description": "Detailed planning, execution and stakeholder alignment.",
+      "unit": "h",
+      "qty": 6,
+      "unitPrice": 200,
+      "discountPct": 10,
+      "sortOrder": 10
+    },
+    {
+      "id": "item-long-pagination-12",
+      "name": "Implementation block 12",
+      "description": null,
+      "unit": "h",
+      "qty": 7,
+      "unitPrice": 208,
+      "discountPct": 0,
+      "sortOrder": 11
+    },
+    {
+      "id": "item-long-pagination-13",
+      "name": "Design sprint phase 13 - rozšírený popis položky pre test zalamovania názvu v tabuľke",
+      "description": "Rovnaká šablóna pri oboch variantoch a doplňujúce poznámky k implementácii.",
+      "unit": "day",
+      "qty": 1,
+      "unitPrice": 216,
+      "discountPct": 0,
+      "sortOrder": 12
+    },
+    {
+      "id": "item-long-pagination-14",
+      "name": "Implementation block 14",
+      "description": null,
+      "unit": "h",
+      "qty": 9,
+      "unitPrice": 224,
+      "discountPct": 0,
+      "sortOrder": 13
+    },
+    {
+      "id": "item-long-pagination-15",
+      "name": "Implementation block 15 - rozšírený popis položky pre test zalamovania názvu v tabuľke",
+      "description": "Detailed planning, execution and stakeholder alignment.",
+      "unit": "h",
+      "qty": 10,
+      "unitPrice": 232,
+      "discountPct": 0,
+      "sortOrder": 14
+    },
+    {
+      "id": "item-long-pagination-16",
+      "name": "Design sprint phase 16",
+      "description": "Rovnaká šablóna pri oboch variantoch a doplňujúce poznámky k implementácii.",
+      "unit": "h",
+      "qty": 6,
+      "unitPrice": 240,
+      "discountPct": 10,
+      "sortOrder": 15
+    },
+    {
+      "id": "item-long-pagination-17",
+      "name": "Implementation block 17 - rozšírený popis položky pre test zalamovania názvu v tabuľke",
+      "description": "Detailed planning, execution and stakeholder alignment.",
+      "unit": "day",
+      "qty": 1,
+      "unitPrice": 248,
+      "discountPct": 0,
+      "sortOrder": 16
+    },
+    {
+      "id": "item-long-pagination-18",
+      "name": "Implementation block 18",
+      "description": null,
+      "unit": "h",
+      "qty": 8,
+      "unitPrice": 256,
+      "discountPct": 0,
+      "sortOrder": 17
+    },
+    {
+      "id": "item-long-pagination-19",
+      "name": "Design sprint phase 19 - rozšírený popis položky pre test zalamovania názvu v tabuľke",
+      "description": "Rovnaká šablóna pri oboch variantoch a doplňujúce poznámky k implementácii.",
+      "unit": "h",
+      "qty": 9,
+      "unitPrice": 264,
+      "discountPct": 0,
+      "sortOrder": 18
+    },
+    {
+      "id": "item-long-pagination-20",
+      "name": "Implementation block 20",
+      "description": null,
+      "unit": "h",
+      "qty": 10,
+      "unitPrice": 272,
+      "discountPct": 0,
+      "sortOrder": 19
+    },
+    {
+      "id": "item-long-pagination-21",
+      "name": "Implementation block 21 - rozšírený popis položky pre test zalamovania názvu v tabuľke",
+      "description": "Detailed planning, execution and stakeholder alignment.",
+      "unit": "day",
+      "qty": 1,
+      "unitPrice": 280,
+      "discountPct": 10,
+      "sortOrder": 20
+    },
+    {
+      "id": "item-long-pagination-22",
+      "name": "Design sprint phase 22",
+      "description": "Rovnaká šablóna pri oboch variantoch a doplňujúce poznámky k implementácii.",
+      "unit": "h",
+      "qty": 7,
+      "unitPrice": 288,
+      "discountPct": 0,
+      "sortOrder": 21
+    },
+    {
+      "id": "item-long-pagination-23",
+      "name": "Implementation block 23 - rozšírený popis položky pre test zalamovania názvu v tabuľke",
+      "description": "Detailed planning, execution and stakeholder alignment.",
+      "unit": "h",
+      "qty": 8,
+      "unitPrice": 296,
+      "discountPct": 0,
+      "sortOrder": 22
+    },
+    {
+      "id": "item-long-pagination-24",
+      "name": "Implementation block 24",
+      "description": null,
+      "unit": "h",
+      "qty": 9,
+      "unitPrice": 304,
+      "discountPct": 0,
+      "sortOrder": 23
+    },
+    {
+      "id": "item-long-pagination-25",
+      "name": "Design sprint phase 25 - rozšírený popis položky pre test zalamovania názvu v tabuľke",
+      "description": "Rovnaká šablóna pri oboch variantoch a doplňujúce poznámky k implementácii.",
+      "unit": "day",
+      "qty": 1,
+      "unitPrice": 312,
+      "discountPct": 0,
+      "sortOrder": 24
+    },
+    {
+      "id": "item-long-pagination-26",
+      "name": "Implementation block 26",
+      "description": null,
+      "unit": "h",
+      "qty": 6,
+      "unitPrice": 320,
+      "discountPct": 10,
+      "sortOrder": 25
+    },
+    {
+      "id": "item-long-pagination-27",
+      "name": "Implementation block 27 - rozšírený popis položky pre test zalamovania názvu v tabuľke",
+      "description": "Detailed planning, execution and stakeholder alignment.",
+      "unit": "h",
+      "qty": 7,
+      "unitPrice": 328,
+      "discountPct": 0,
+      "sortOrder": 26
+    },
+    {
+      "id": "item-long-pagination-28",
+      "name": "Design sprint phase 28",
+      "description": "Rovnaká šablóna pri oboch variantoch a doplňujúce poznámky k implementácii.",
+      "unit": "h",
+      "qty": 8,
+      "unitPrice": 336,
+      "discountPct": 0,
+      "sortOrder": 27
+    }
+  ],
+  "totals": {
+    "subtotal": 39264,
+    "totalDiscount": 1963.2,
+    "taxableBase": 37300.8,
+    "vatAmount": 7460.16,
+    "grandTotal": 44760.96
+  },
+  "rendered": {
+    "metaChips": {
+      "createdAt": "14/02/2026",
+      "validUntil": "14/03/2026",
+      "currency": "EUR",
+      "vatStatus": "VAT 20.00%"
+    },
+    "itemRows": [
+      {
+        "id": "item-long-pagination-1",
+        "qty": "1.00",
+        "unitPrice": "120.00 EUR",
+        "discount": "-10.00%",
+        "lineTotal": "108.00 EUR"
+      },
+      {
+        "id": "item-long-pagination-2",
+        "qty": "7.00",
+        "unitPrice": "128.00 EUR",
+        "discount": "",
+        "lineTotal": "896.00 EUR"
+      },
+      {
+        "id": "item-long-pagination-3",
+        "qty": "8.00",
+        "unitPrice": "136.00 EUR",
+        "discount": "",
+        "lineTotal": "1,088.00 EUR"
+      },
+      {
+        "id": "item-long-pagination-4",
+        "qty": "9.00",
+        "unitPrice": "144.00 EUR",
+        "discount": "",
+        "lineTotal": "1,296.00 EUR"
+      },
+      {
+        "id": "item-long-pagination-5",
+        "qty": "1.00",
+        "unitPrice": "152.00 EUR",
+        "discount": "",
+        "lineTotal": "152.00 EUR"
+      },
+      {
+        "id": "item-long-pagination-6",
+        "qty": "6.00",
+        "unitPrice": "160.00 EUR",
+        "discount": "-10.00%",
+        "lineTotal": "864.00 EUR"
+      },
+      {
+        "id": "item-long-pagination-7",
+        "qty": "7.00",
+        "unitPrice": "168.00 EUR",
+        "discount": "",
+        "lineTotal": "1,176.00 EUR"
+      },
+      {
+        "id": "item-long-pagination-8",
+        "qty": "8.00",
+        "unitPrice": "176.00 EUR",
+        "discount": "",
+        "lineTotal": "1,408.00 EUR"
+      },
+      {
+        "id": "item-long-pagination-9",
+        "qty": "1.00",
+        "unitPrice": "184.00 EUR",
+        "discount": "",
+        "lineTotal": "184.00 EUR"
+      },
+      {
+        "id": "item-long-pagination-10",
+        "qty": "10.00",
+        "unitPrice": "192.00 EUR",
+        "discount": "",
+        "lineTotal": "1,920.00 EUR"
+      },
+      {
+        "id": "item-long-pagination-11",
+        "qty": "6.00",
+        "unitPrice": "200.00 EUR",
+        "discount": "-10.00%",
+        "lineTotal": "1,080.00 EUR"
+      },
+      {
+        "id": "item-long-pagination-12",
+        "qty": "7.00",
+        "unitPrice": "208.00 EUR",
+        "discount": "",
+        "lineTotal": "1,456.00 EUR"
+      },
+      {
+        "id": "item-long-pagination-13",
+        "qty": "1.00",
+        "unitPrice": "216.00 EUR",
+        "discount": "",
+        "lineTotal": "216.00 EUR"
+      },
+      {
+        "id": "item-long-pagination-14",
+        "qty": "9.00",
+        "unitPrice": "224.00 EUR",
+        "discount": "",
+        "lineTotal": "2,016.00 EUR"
+      },
+      {
+        "id": "item-long-pagination-15",
+        "qty": "10.00",
+        "unitPrice": "232.00 EUR",
+        "discount": "",
+        "lineTotal": "2,320.00 EUR"
+      },
+      {
+        "id": "item-long-pagination-16",
+        "qty": "6.00",
+        "unitPrice": "240.00 EUR",
+        "discount": "-10.00%",
+        "lineTotal": "1,296.00 EUR"
+      },
+      {
+        "id": "item-long-pagination-17",
+        "qty": "1.00",
+        "unitPrice": "248.00 EUR",
+        "discount": "",
+        "lineTotal": "248.00 EUR"
+      },
+      {
+        "id": "item-long-pagination-18",
+        "qty": "8.00",
+        "unitPrice": "256.00 EUR",
+        "discount": "",
+        "lineTotal": "2,048.00 EUR"
+      },
+      {
+        "id": "item-long-pagination-19",
+        "qty": "9.00",
+        "unitPrice": "264.00 EUR",
+        "discount": "",
+        "lineTotal": "2,376.00 EUR"
+      },
+      {
+        "id": "item-long-pagination-20",
+        "qty": "10.00",
+        "unitPrice": "272.00 EUR",
+        "discount": "",
+        "lineTotal": "2,720.00 EUR"
+      },
+      {
+        "id": "item-long-pagination-21",
+        "qty": "1.00",
+        "unitPrice": "280.00 EUR",
+        "discount": "-10.00%",
+        "lineTotal": "252.00 EUR"
+      },
+      {
+        "id": "item-long-pagination-22",
+        "qty": "7.00",
+        "unitPrice": "288.00 EUR",
+        "discount": "",
+        "lineTotal": "2,016.00 EUR"
+      },
+      {
+        "id": "item-long-pagination-23",
+        "qty": "8.00",
+        "unitPrice": "296.00 EUR",
+        "discount": "",
+        "lineTotal": "2,368.00 EUR"
+      },
+      {
+        "id": "item-long-pagination-24",
+        "qty": "9.00",
+        "unitPrice": "304.00 EUR",
+        "discount": "",
+        "lineTotal": "2,736.00 EUR"
+      },
+      {
+        "id": "item-long-pagination-25",
+        "qty": "1.00",
+        "unitPrice": "312.00 EUR",
+        "discount": "",
+        "lineTotal": "312.00 EUR"
+      },
+      {
+        "id": "item-long-pagination-26",
+        "qty": "6.00",
+        "unitPrice": "320.00 EUR",
+        "discount": "-10.00%",
+        "lineTotal": "1,728.00 EUR"
+      },
+      {
+        "id": "item-long-pagination-27",
+        "qty": "7.00",
+        "unitPrice": "328.00 EUR",
+        "discount": "",
+        "lineTotal": "2,296.00 EUR"
+      },
+      {
+        "id": "item-long-pagination-28",
+        "qty": "8.00",
+        "unitPrice": "336.00 EUR",
+        "discount": "",
+        "lineTotal": "2,688.00 EUR"
+      }
+    ],
+    "totals": {
+      "subtotal": "39,264.00 EUR",
+      "totalDiscount": "1,963.20 EUR",
+      "vat": "7,460.16 EUR",
+      "grandTotal": "44,760.96 EUR"
+    },
+    "revisionLine": "2 revision rounds are included."
+  }
+}

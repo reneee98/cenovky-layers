@@ -125,6 +125,8 @@ model Quote {
   validUntil          DateTime          @map("valid_until")
   vatEnabled          Boolean           @default(true) @map("vat_enabled")
   vatRate             Decimal           @map("vat_rate")
+  showClientDetailsInPdf Boolean        @default(true) @map("show_client_details_in_pdf")
+  showCompanyDetailsInPdf Boolean       @default(true) @map("show_company_details_in_pdf")
   introContentMarkdown String           @default("") @map("intro_content_markdown")
   termsContentMarkdown String           @default("") @map("terms_content_markdown")
   revisionsIncluded   Int               @default(1) @map("revisions_included")
