@@ -3,12 +3,45 @@
 import "dotenv/config";
 import { defineConfig } from "prisma/config";
 
+function inferSupabaseDirectUrl(): string | undefined {
+  const supabaseUrl = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseDbPassword = process.env.SUPABASE_DB_PASSWORD ?? process.env.SUPABASE_DB_PASS;
+
+  if (!supabaseUrl || !supabaseDbPassword) {
+    return undefined;
+  }
+
+  let projectRef: string;
+  try {
+    const hostname = new URL(supabaseUrl).hostname;
+    projectRef = hostname.split(".")[0] ?? "";
+  } catch {
+    return undefined;
+  }
+
+  if (!projectRef) {
+    return undefined;
+  }
+
+  const encodedPassword = encodeURIComponent(supabaseDbPassword);
+  return `postgresql://postgres:${encodedPassword}@db.${projectRef}.supabase.co:5432/postgres`;
+}
+
+const datasourceUrl =
+  process.env.SUPABASE_DB_URL ??
+  process.env.SUPABASE_DATABASE_URL ??
+  process.env.DATABASE_URL ??
+  process.env.POSTGRES_PRISMA_URL ??
+  process.env.POSTGRES_URL ??
+  process.env.POSTGRES_URL_NON_POOLING ??
+  inferSupabaseDirectUrl();
+
 export default defineConfig({
   schema: "prisma/schema.prisma",
   migrations: {
     path: "prisma/migrations",
   },
   datasource: {
-    url: process.env["DATABASE_URL"],
+    url: datasourceUrl,
   },
 });
