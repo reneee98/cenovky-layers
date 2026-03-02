@@ -4,6 +4,7 @@ import type { InvoiceKind } from "@/types/domain";
 import type { QuoteStatus as QuoteStatusEnum } from "@/types/domain";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { isRedirectError } from "next/dist/client/components/redirect-error";
 
 import { requireUserId } from "@/lib/auth";
 import { isDbKnownRequestError } from "@/lib/db-errors";
@@ -397,6 +398,10 @@ export async function createInvoiceFromQuoteAction(formData: FormData): Promise<
     revalidatePath(buildQuoteBuilderUrl(quoteId));
     redirect(`/invoices/${invoice.id}?notice=Faktura bola vytvorena z ponuky.`);
   } catch (error) {
+    if (isRedirectError(error)) {
+      throw error;
+    }
+
     console.error("createInvoiceFromQuoteAction failed", {
       userId,
       quoteId,
