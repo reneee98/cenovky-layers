@@ -48,8 +48,14 @@ type CachedTemplate = {
   css: string;
 };
 
+type ChromeLaunchOptions = {
+  executablePath: string;
+  args: string[];
+  headless: boolean;
+};
+
 let cachedTemplate: CachedTemplate | null = null;
-let cachedChromeExecutable: string | null | undefined;
+let cachedChromeLaunchOptions: ChromeLaunchOptions | null | undefined;
 
 type LocaleLabels = {
   titleLabel: string;
@@ -679,30 +685,60 @@ async function findPlaywrightChromiumExecutableFromCache(): Promise<string | nul
 }
 
 async function resolveChromeExecutablePath(): Promise<string | null> {
-  if (cachedChromeExecutable !== undefined) {
-    return cachedChromeExecutable;
+  if (cachedChromeLaunchOptions !== undefined) {
+    return cachedChromeLaunchOptions?.executablePath ?? null;
   }
 
   const playwrightExecutable = chromium.executablePath();
   if (playwrightExecutable && (await ensureReadable(playwrightExecutable))) {
-    cachedChromeExecutable = playwrightExecutable;
-    return cachedChromeExecutable;
+    cachedChromeLaunchOptions = {
+      executablePath: playwrightExecutable,
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+      headless: true,
+    };
+    return cachedChromeLaunchOptions.executablePath;
   }
 
   for (const candidate of CHROME_EXECUTABLE_CANDIDATES) {
     if (await ensureReadable(candidate)) {
-      cachedChromeExecutable = candidate;
-      return cachedChromeExecutable;
+      cachedChromeLaunchOptions = {
+        executablePath: candidate,
+        args: ["--no-sandbox", "--disable-setuid-sandbox"],
+        headless: true,
+      };
+      return cachedChromeLaunchOptions.executablePath;
     }
   }
 
   const playwrightCacheExecutable = await findPlaywrightChromiumExecutableFromCache();
   if (playwrightCacheExecutable) {
-    cachedChromeExecutable = playwrightCacheExecutable;
-    return cachedChromeExecutable;
+    cachedChromeLaunchOptions = {
+      executablePath: playwrightCacheExecutable,
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+      headless: true,
+    };
+    return cachedChromeLaunchOptions.executablePath;
   }
 
-  cachedChromeExecutable = null;
+  // Vercel/AWS Lambda fallback: bundled Chromium binary from @sparticuz/chromium.
+  try {
+    const chromiumModule = await import("@sparticuz/chromium");
+    const serverlessChromium = chromiumModule.default ?? chromiumModule;
+    const executablePath = await serverlessChromium.executablePath();
+    if (typeof executablePath === "string" && executablePath.length > 0 && (await ensureReadable(executablePath))) {
+      const extraArgs = Array.isArray(serverlessChromium.args) ? serverlessChromium.args : [];
+      cachedChromeLaunchOptions = {
+        executablePath,
+        args: [...new Set([...extraArgs, "--no-sandbox", "--disable-setuid-sandbox"])],
+        headless: true,
+      };
+      return cachedChromeLaunchOptions.executablePath;
+    }
+  } catch {
+    // Optional dependency in non-serverless environments.
+  }
+
+  cachedChromeLaunchOptions = null;
   return null;
 }
 
@@ -893,10 +929,16 @@ export async function renderQuotePdfFromTemplate(
     );
   }
 
-  const browser = await chromium.launch({
-    headless: true,
+  const launchOptions = cachedChromeLaunchOptions ?? {
     executablePath,
     args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    headless: true,
+  };
+
+  const browser = await chromium.launch({
+    headless: launchOptions.headless,
+    executablePath: launchOptions.executablePath,
+    args: launchOptions.args,
   });
 
   try {
