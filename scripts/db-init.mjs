@@ -1,7 +1,7 @@
 import "dotenv/config";
 
-import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient } from "@prisma/client";
+import { randomUUID } from "node:crypto";
+import { Pool } from "pg";
 
 function normalizeConnectionString(rawConnectionString) {
   try {
@@ -49,14 +49,13 @@ const rawConnectionString =
   process.env.SUPABASE_DB_URL ??
   process.env.SUPABASE_DATABASE_URL ??
   process.env.DATABASE_URL ??
-  process.env.POSTGRES_PRISMA_URL ??
   process.env.POSTGRES_URL ??
   process.env.POSTGRES_URL_NON_POOLING ??
   inferSupabaseDirectUrl();
 
 if (!rawConnectionString) {
   throw new Error(
-    "Supabase/Postgres connection is not set. Provide SUPABASE_DB_URL (or DATABASE_URL / POSTGRES_URL / POSTGRES_PRISMA_URL).",
+    "Supabase/Postgres connection is not set. Provide SUPABASE_DB_URL (or DATABASE_URL / POSTGRES_URL).",
   );
 }
 
@@ -66,12 +65,10 @@ if (!seedUserId) {
 }
 
 const connectionString = normalizeConnectionString(rawConnectionString);
-const adapter = new PrismaPg({
+const pool = new Pool({
   connectionString,
   ssl: isSupabaseHost(connectionString) ? { rejectUnauthorized: false } : undefined,
 });
-
-const prisma = new PrismaClient({ adapter });
 
 const defaults = {
   userId: seedUserId,
@@ -86,19 +83,86 @@ const defaults = {
   numberingCounter: 0,
 };
 
-async function main() {
-  const settings = await prisma.settings.upsert({
-    where: { userId: seedUserId },
-    update: {},
-    create: defaults,
-  });
+async function ensureSettings() {
+  await pool.query(
+    `INSERT INTO settings (
+      user_id,
+      company_name,
+      company_address,
+      company_email,
+      company_phone,
+      default_language,
+      default_currency,
+      vat_rate,
+      numbering_year,
+      numbering_counter
+    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+    ON CONFLICT (user_id) DO NOTHING`,
+    [
+      defaults.userId,
+      defaults.companyName,
+      defaults.companyAddress,
+      defaults.companyEmail,
+      defaults.companyPhone,
+      defaults.defaultLanguage,
+      defaults.defaultCurrency,
+      defaults.vatRate,
+      defaults.numberingYear,
+      defaults.numberingCounter,
+    ],
+  );
+
+  const { rows } = await pool.query(
+    `SELECT
+      user_id AS "userId",
+      default_language AS "defaultLanguage",
+      default_currency AS "defaultCurrency",
+      vat_rate AS "vatRate"
+    FROM settings
+    WHERE user_id = $1
+    LIMIT 1`,
+    [seedUserId],
+  );
+
+  const settings = rows[0];
+
+  if (!settings) {
+    throw new Error("SETTINGS_INIT_FAILED");
+  }
 
   console.log("Settings initialized", {
     userId: settings.userId,
     defaultLanguage: settings.defaultLanguage,
     defaultCurrency: settings.defaultCurrency,
-    vatRate: settings.vatRate.toString(),
+    vatRate: String(settings.vatRate),
   });
+}
+
+async function ensureSeedTables() {
+  const snippetCountRes = await pool.query(
+    `SELECT COUNT(*)::int AS count FROM snippets WHERE user_id = $1`,
+    [seedUserId],
+  );
+
+  if ((snippetCountRes.rows[0]?.count ?? 0) === 0) {
+    await pool.query(
+      `INSERT INTO snippets (id, user_id, type, language, title, content_markdown)
+       VALUES ($1,$2,$3,$4,$5,$6)`,
+      [
+        `snp_${randomUUID().replace(/-/g, "")}`,
+        seedUserId,
+        "intro",
+        "sk",
+        "Uvod - standard",
+        "Dakujeme za zaujem o spolupracu.",
+      ],
+    );
+  }
+}
+
+async function main() {
+  await ensureSettings();
+  await ensureSeedTables();
 }
 
 main()
@@ -107,5 +171,5 @@ main()
     process.exitCode = 1;
   })
   .finally(async () => {
-    await prisma.$disconnect();
+    await pool.end();
   });

@@ -11,6 +11,9 @@ revoke all on table public.quotes from anon;
 revoke all on table public.quote_items from anon;
 revoke all on table public.scope_items from anon;
 revoke all on table public.quote_versions from anon;
+revoke all on table public.invoices from anon;
+revoke all on table public.invoice_items from anon;
+revoke all on table public.payments from anon;
 
 grant select, insert, update, delete on table public.settings to authenticated;
 grant select, insert, update, delete on table public.clients to authenticated;
@@ -20,6 +23,9 @@ grant select, insert, update, delete on table public.quotes to authenticated;
 grant select, insert, update, delete on table public.quote_items to authenticated;
 grant select, insert, update, delete on table public.scope_items to authenticated;
 grant select, insert, update, delete on table public.quote_versions to authenticated;
+grant select, insert, update, delete on table public.invoices to authenticated;
+grant select, insert, update, delete on table public.invoice_items to authenticated;
+grant select, insert, update, delete on table public.payments to authenticated;
 
 alter table public.settings enable row level security;
 alter table public.clients enable row level security;
@@ -29,6 +35,9 @@ alter table public.quotes enable row level security;
 alter table public.quote_items enable row level security;
 alter table public.scope_items enable row level security;
 alter table public.quote_versions enable row level security;
+alter table public.invoices enable row level security;
+alter table public.invoice_items enable row level security;
+alter table public.payments enable row level security;
 
 alter table public.settings force row level security;
 alter table public.clients force row level security;
@@ -38,6 +47,9 @@ alter table public.quotes force row level security;
 alter table public.quote_items force row level security;
 alter table public.scope_items force row level security;
 alter table public.quote_versions force row level security;
+alter table public.invoices force row level security;
+alter table public.invoice_items force row level security;
+alter table public.payments force row level security;
 
 -- Settings
 
@@ -197,6 +209,66 @@ create policy quote_versions_update_own on public.quote_versions
   with check (auth.uid()::text = user_id);
 
 create policy quote_versions_delete_own on public.quote_versions
+  for delete using (auth.uid()::text = user_id);
+
+-- Invoices
+
+drop policy if exists invoices_select_own on public.invoices;
+drop policy if exists invoices_insert_own on public.invoices;
+drop policy if exists invoices_update_own on public.invoices;
+drop policy if exists invoices_delete_own on public.invoices;
+
+create policy invoices_select_own on public.invoices
+  for select using (auth.uid()::text = user_id);
+
+create policy invoices_insert_own on public.invoices
+  for insert with check (auth.uid()::text = user_id);
+
+create policy invoices_update_own on public.invoices
+  for update using (auth.uid()::text = user_id)
+  with check (auth.uid()::text = user_id);
+
+create policy invoices_delete_own on public.invoices
+  for delete using (auth.uid()::text = user_id);
+
+-- Invoice items
+
+drop policy if exists invoice_items_select_own on public.invoice_items;
+drop policy if exists invoice_items_insert_own on public.invoice_items;
+drop policy if exists invoice_items_update_own on public.invoice_items;
+drop policy if exists invoice_items_delete_own on public.invoice_items;
+
+create policy invoice_items_select_own on public.invoice_items
+  for select using (auth.uid()::text = user_id);
+
+create policy invoice_items_insert_own on public.invoice_items
+  for insert with check (auth.uid()::text = user_id);
+
+create policy invoice_items_update_own on public.invoice_items
+  for update using (auth.uid()::text = user_id)
+  with check (auth.uid()::text = user_id);
+
+create policy invoice_items_delete_own on public.invoice_items
+  for delete using (auth.uid()::text = user_id);
+
+-- Payments
+
+drop policy if exists payments_select_own on public.payments;
+drop policy if exists payments_insert_own on public.payments;
+drop policy if exists payments_update_own on public.payments;
+drop policy if exists payments_delete_own on public.payments;
+
+create policy payments_select_own on public.payments
+  for select using (auth.uid()::text = user_id);
+
+create policy payments_insert_own on public.payments
+  for insert with check (auth.uid()::text = user_id);
+
+create policy payments_update_own on public.payments
+  for update using (auth.uid()::text = user_id)
+  with check (auth.uid()::text = user_id);
+
+create policy payments_delete_own on public.payments
   for delete using (auth.uid()::text = user_id);
 
 commit;

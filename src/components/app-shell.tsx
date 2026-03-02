@@ -6,6 +6,7 @@ import {
   Menu,
   Package,
   Plus,
+  ReceiptText,
   Settings,
   Users,
 } from "lucide-react";
@@ -34,6 +35,13 @@ const NAV_ITEMS = [
     description: "Kontaktne a fakturacne data",
     href: "/clients",
     icon: Users,
+  },
+  {
+    key: "invoices",
+    label: "Faktury",
+    description: "Evidencia vystavenych faktur",
+    href: "/invoices",
+    icon: ReceiptText,
   },
   {
     key: "catalog",

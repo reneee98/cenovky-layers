@@ -85,15 +85,15 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-geist-sans, ui-sans-serif, system-ui, sans-serif, "Segoe UI", Roboto, sans-serif);
+  --font-mono: var(--font-geist-mono, ui-monospace, monospace, "Cascadia Code", monospace);
 }
 
 body {
   margin: 0;
   background: var(--color-bg);
   color: var(--color-ink);
-  font-family: var(--font-geist-sans), sans-serif;
+  font-family: var(--font-geist-sans, ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif);
   font-size: var(--text-body-size);
   line-height: var(--text-body-line);
   overflow-x: clip;

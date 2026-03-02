@@ -1,11 +1,14 @@
-import type { Prisma } from "@/types/prisma";
-
-import { prisma } from "@/lib/prisma";
+import { createEntityId, dbQuery, dbQueryOne } from "@/lib/db";
 import { buildDefaultSettingsCreateInput } from "@/server/db/settings-defaults";
 
 const LEGACY_USER_ID = "legacy-user";
 
-const STARTER_SNIPPETS: Array<Pick<Prisma.SnippetUncheckedCreateInput, "type" | "language" | "title" | "contentMarkdown">> = [
+const STARTER_SNIPPETS: Array<{
+  type: "intro" | "terms";
+  language: "sk" | "en";
+  title: string;
+  contentMarkdown: string;
+}> = [
   {
     type: "intro",
     language: "sk",
@@ -50,7 +53,14 @@ const STARTER_SNIPPETS: Array<Pick<Prisma.SnippetUncheckedCreateInput, "type" | 
   },
 ];
 
-const STARTER_CATALOG_ITEMS: Array<Pick<Prisma.CatalogItemUncheckedCreateInput, "category" | "tags" | "name" | "description" | "defaultUnit" | "defaultUnitPrice">> = [
+const STARTER_CATALOG_ITEMS: Array<{
+  category: string;
+  tags: string[];
+  name: string;
+  description: string;
+  defaultUnit: "h" | "day" | "pcs" | "pkg";
+  defaultUnitPrice: number;
+}> = [
   {
     category: "Strategy",
     tags: ["workshop", "analysis"],
@@ -77,126 +87,151 @@ const STARTER_CATALOG_ITEMS: Array<Pick<Prisma.CatalogItemUncheckedCreateInput, 
   },
 ];
 
+async function countByUser(table: string, userId: string): Promise<number> {
+  const row = await dbQueryOne<{ count: string }>(`SELECT COUNT(*)::text AS count FROM ${table} WHERE user_id = $1`, [
+    userId,
+  ]);
+  return Number(row?.count ?? "0");
+}
+
 async function claimLegacyWorkspaceForUser(userId: string): Promise<boolean> {
-  return prisma.$transaction(async (tx) => {
-    const [userClients, userQuotes, userCatalogItems, userSnippets] = await Promise.all([
-      tx.client.count({ where: { userId } }),
-      tx.quote.count({ where: { userId } }),
-      tx.catalogItem.count({ where: { userId } }),
-      tx.snippet.count({ where: { userId } }),
+  try {
+    const userCounts = await Promise.all([
+      countByUser("clients", userId),
+      countByUser("quotes", userId),
+      countByUser("catalog_items", userId),
+      countByUser("snippets", userId),
+      countByUser("invoices", userId),
     ]);
 
-    const userHasCoreData =
-      userClients > 0 || userQuotes > 0 || userCatalogItems > 0 || userSnippets > 0;
-
+    const userHasCoreData = userCounts.some((value) => value > 0);
     if (userHasCoreData) {
       return false;
     }
 
-    const [legacyClients, legacyQuotes, legacyCatalogItems, legacySnippets] = await Promise.all([
-      tx.client.count({ where: { userId: LEGACY_USER_ID } }),
-      tx.quote.count({ where: { userId: LEGACY_USER_ID } }),
-      tx.catalogItem.count({ where: { userId: LEGACY_USER_ID } }),
-      tx.snippet.count({ where: { userId: LEGACY_USER_ID } }),
+    const legacyCounts = await Promise.all([
+      countByUser("clients", LEGACY_USER_ID),
+      countByUser("quotes", LEGACY_USER_ID),
+      countByUser("catalog_items", LEGACY_USER_ID),
+      countByUser("snippets", LEGACY_USER_ID),
+      countByUser("invoices", LEGACY_USER_ID),
     ]);
 
-    const legacyHasCoreData =
-      legacyClients > 0 || legacyQuotes > 0 || legacyCatalogItems > 0 || legacySnippets > 0;
-
+    const legacyHasCoreData = legacyCounts.some((value) => value > 0);
     if (!legacyHasCoreData) {
       return false;
     }
 
-    const legacySettings = await tx.settings.findFirst({
-      where: { userId: LEGACY_USER_ID },
-      orderBy: { id: "asc" },
-      select: { id: true },
-    });
+    const legacySettings = await dbQueryOne<{ id: number }>(
+      `SELECT id FROM settings WHERE user_id = $1 ORDER BY id ASC LIMIT 1`,
+      [LEGACY_USER_ID],
+    );
 
-    await tx.settings.deleteMany({ where: { userId } });
+    await dbQuery(`DELETE FROM settings WHERE user_id = $1`, [userId]);
 
     if (legacySettings) {
-      await tx.settings.update({
-        where: { id: legacySettings.id },
-        data: { userId },
-      });
-
-      await tx.settings.deleteMany({
-        where: {
-          userId: LEGACY_USER_ID,
-          id: { not: legacySettings.id },
-        },
-      });
+      await dbQuery(`UPDATE settings SET user_id = $1 WHERE id = $2`, [userId, legacySettings.id]);
+      await dbQuery(`DELETE FROM settings WHERE user_id = $1 AND id <> $2`, [LEGACY_USER_ID, legacySettings.id]);
     }
 
-    await tx.client.updateMany({
-      where: { userId: LEGACY_USER_ID },
-      data: { userId },
-    });
+    const tables = [
+      "clients",
+      "catalog_items",
+      "snippets",
+      "quotes",
+      "quote_items",
+      "scope_items",
+      "quote_versions",
+      "invoices",
+      "invoice_items",
+      "payments",
+    ];
 
-    await tx.catalogItem.updateMany({
-      where: { userId: LEGACY_USER_ID },
-      data: { userId },
-    });
-
-    await tx.snippet.updateMany({
-      where: { userId: LEGACY_USER_ID },
-      data: { userId },
-    });
-
-    await tx.quote.updateMany({
-      where: { userId: LEGACY_USER_ID },
-      data: { userId },
-    });
-
-    await tx.quoteItem.updateMany({
-      where: { userId: LEGACY_USER_ID },
-      data: { userId },
-    });
-
-    await tx.scopeItem.updateMany({
-      where: { userId: LEGACY_USER_ID },
-      data: { userId },
-    });
-
-    await tx.quoteVersion.updateMany({
-      where: { userId: LEGACY_USER_ID },
-      data: { userId },
-    });
+    for (const table of tables) {
+      await dbQuery(`UPDATE ${table} SET user_id = $1 WHERE user_id = $2`, [userId, LEGACY_USER_ID]);
+    }
 
     return true;
-  });
+  } catch (error) {
+    console.error("Legacy workspace claim skipped:", error);
+    return false;
+  }
+}
+
+async function ensureSettings(userId: string): Promise<void> {
+  const defaults = buildDefaultSettingsCreateInput(userId);
+
+  await dbQuery(
+    `INSERT INTO settings (
+      user_id,
+      company_name,
+      company_address,
+      company_email,
+      company_phone,
+      default_language,
+      default_currency,
+      vat_rate,
+      numbering_year,
+      numbering_counter
+    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+    ON CONFLICT (user_id) DO NOTHING`,
+    [
+      defaults.userId,
+      defaults.companyName,
+      defaults.companyAddress,
+      defaults.companyEmail,
+      defaults.companyPhone,
+      defaults.defaultLanguage,
+      defaults.defaultCurrency,
+      defaults.vatRate,
+      defaults.numberingYear,
+      defaults.numberingCounter,
+    ],
+  );
 }
 
 export async function ensureUserBootstrapData(userId: string): Promise<void> {
   await claimLegacyWorkspaceForUser(userId);
-
-  await prisma.settings.upsert({
-    where: { userId },
-    create: buildDefaultSettingsCreateInput(userId),
-    update: {},
-  });
+  await ensureSettings(userId);
 
   const [snippetCount, catalogCount] = await Promise.all([
-    prisma.snippet.count({ where: { userId } }),
-    prisma.catalogItem.count({ where: { userId } }),
+    countByUser("snippets", userId),
+    countByUser("catalog_items", userId),
   ]);
 
   if (snippetCount === 0) {
-    await prisma.snippet.createMany({
-      data: STARTER_SNIPPETS.map((snippet) => ({
-        userId,
-        ...snippet,
-      })),
-    });
+    for (const snippet of STARTER_SNIPPETS) {
+      await dbQuery(
+        `INSERT INTO snippets (id, user_id, type, language, title, content_markdown)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [
+          createEntityId("snip"),
+          userId,
+          snippet.type,
+          snippet.language,
+          snippet.title,
+          snippet.contentMarkdown,
+        ],
+      );
+    }
   }
 
   if (catalogCount === 0) {
-    await prisma.catalogItem.createMany({
-      data: STARTER_CATALOG_ITEMS.map((item) => ({
-        userId,
-        ...item,
-      })),
-    });
+    for (const item of STARTER_CATALOG_ITEMS) {
+      await dbQuery(
+        `INSERT INTO catalog_items (id, user_id, category, tags, name, description, default_unit, default_unit_price)
+         VALUES ($1, $2, $3, $4::jsonb, $5, $6, $7, $8)`,
+        [
+          createEntityId("cat"),
+          userId,
+          item.category,
+          JSON.stringify(item.tags),
+          item.name,
+          item.description,
+          item.defaultUnit,
+          item.defaultUnitPrice,
+        ],
+      );
+    }
   }
 }

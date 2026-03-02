@@ -1,12 +1,16 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import type { Prisma } from "@/types/prisma";
 
 import { duplicateQuoteToBuilderAction } from "@/app/quotes/actions";
+import { CreateInvoiceFromQuoteTrigger } from "@/app/quotes/[id]/create-invoice-dialog";
 import { QuoteBuilderEditor } from "@/app/quotes/[id]/quote-builder-editor";
 import { AppShell } from "@/components/app-shell";
 import { requireUserId } from "@/lib/auth";
+import { formatCurrency } from "@/lib/format";
 import { isQuoteItemSectionDescription } from "@/lib/quotes/items";
+import { formatQuoteInvoicingState } from "@/lib/quotes/invoicing";
+import { getQuoteInvoicingMetrics } from "@/server/invoices/quote-metrics";
+import { buildDefaultVariableSymbol, reserveNextInvoiceNumber } from "@/server/invoices/numbering";
 import {
   getQuoteWithRelations,
   listCatalogItems,
@@ -23,7 +27,7 @@ type QuoteBuilderPageProps = {
   }>;
 };
 
-function toStringTags(tags: Prisma.JsonValue): string[] {
+function toStringTags(tags: unknown): string[] {
   if (!Array.isArray(tags)) {
     return [];
   }
@@ -46,6 +50,21 @@ export default async function QuoteBuilderPage({ params, searchParams }: QuoteBu
     notFound();
   }
 
+  const [invoicingMetrics, suggestedInvoiceNumber] = await Promise.all([
+    getQuoteInvoicingMetrics(userId, quote.id),
+    reserveNextInvoiceNumber(userId, new Date()),
+  ]);
+  const suggestedVariableSymbol = buildDefaultVariableSymbol(suggestedInvoiceNumber);
+
+  const client = quote.client as {
+    defaultPaymentMethod: string | null;
+    defaultDueDays: number | null;
+  } | undefined;
+  const defaultPaymentMethod = client?.defaultPaymentMethod ?? "bank_transfer";
+  const defaultDueDays = client?.defaultDueDays ?? 14;
+
+  type QuoteItem = (typeof quote)["items"][number];
+
   return (
     <AppShell
       active="quotes"
@@ -53,6 +72,20 @@ export default async function QuoteBuilderPage({ params, searchParams }: QuoteBu
       description="Premium editor s automatickym ukladanim"
       headerActions={
         <div className="flex w-full flex-wrap justify-end gap-2 sm:w-auto">
+          {invoicingMetrics ? (
+            <CreateInvoiceFromQuoteTrigger
+              quoteId={quote.id}
+              quoteNumber={quote.number}
+              currency={quote.currency}
+              quoteTotal={invoicingMetrics.quoteTotal}
+              invoicedAmount={invoicingMetrics.invoicedAmount}
+              remainingToInvoice={invoicingMetrics.remainingToInvoice}
+              suggestedInvoiceNumber={suggestedInvoiceNumber}
+              suggestedVariableSymbol={suggestedVariableSymbol}
+              defaultPaymentMethod={defaultPaymentMethod}
+              defaultDueDays={defaultDueDays}
+            />
+          ) : null}
           <Link
             href="/quotes"
             className="ui-btn ui-btn--secondary ui-btn--md w-full sm:w-auto"
@@ -63,6 +96,35 @@ export default async function QuoteBuilderPage({ params, searchParams }: QuoteBu
       }
     >
       {query.notice ? <p className="text-sm text-emerald-700">{query.notice}</p> : null}
+
+      {invoicingMetrics ? (
+        <section className="mb-4 grid gap-3 sm:grid-cols-4">
+          <article className="rounded-md border border-slate-200 bg-white p-3 text-sm">
+            <p className="text-xs uppercase tracking-wide text-slate-500">Quote Value</p>
+            <p className="mt-1 font-semibold text-slate-900">
+              {formatCurrency(invoicingMetrics.quoteTotal, quote.currency)}
+            </p>
+          </article>
+          <article className="rounded-md border border-slate-200 bg-white p-3 text-sm">
+            <p className="text-xs uppercase tracking-wide text-slate-500">Invoiced Amount</p>
+            <p className="mt-1 font-semibold text-slate-900">
+              {formatCurrency(invoicingMetrics.invoicedAmount, quote.currency)}
+            </p>
+          </article>
+          <article className="rounded-md border border-slate-200 bg-white p-3 text-sm">
+            <p className="text-xs uppercase tracking-wide text-slate-500">Remaining to Invoice</p>
+            <p className="mt-1 font-semibold text-slate-900">
+              {formatCurrency(invoicingMetrics.remainingToInvoice, quote.currency)}
+            </p>
+          </article>
+          <article className="rounded-md border border-slate-200 bg-white p-3 text-sm">
+            <p className="text-xs uppercase tracking-wide text-slate-500">Invoicing State</p>
+            <p className="mt-1 font-semibold text-slate-900">
+              {formatQuoteInvoicingState(invoicingMetrics.invoicingState)}
+            </p>
+          </article>
+        </section>
+      ) : null}
 
       <QuoteBuilderEditor
         quoteId={quote.id}
@@ -105,7 +167,7 @@ export default async function QuoteBuilderPage({ params, searchParams }: QuoteBu
           totalDiscountValue: quote.totalDiscountValue.toString(),
           vatRate: quote.vatRate.toString(),
         }}
-        initialItems={quote.items.map((item) => {
+        initialItems={quote.items.map((item: QuoteItem) => {
           const isSection = isQuoteItemSectionDescription(item.description);
 
           return {

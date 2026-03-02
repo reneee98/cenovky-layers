@@ -1,6 +1,4 @@
-import type { Prisma } from "@/types/prisma";
-
-import { prisma } from "@/lib/prisma";
+import { createEntityId, createNotFoundError, dbQuery, dbQueryOne, numericToNumber, toDate } from "@/lib/db";
 
 export type ListCatalogItemFilters = {
   category?: string;
@@ -8,114 +6,231 @@ export type ListCatalogItemFilters = {
   search?: string;
 };
 
-function jsonArrayContainsTag(tags: Prisma.JsonValue, tag: string): boolean {
-  if (!Array.isArray(tags)) {
-    return false;
-  }
+type CatalogItemRow = {
+  id: string;
+  userId: string;
+  category: string;
+  tags: unknown;
+  name: string;
+  description: string | null;
+  defaultUnit: "h" | "day" | "pcs" | "pkg";
+  defaultUnitPrice: number | string;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+};
 
-  return tags.some((entry) => {
-    return typeof entry === "string" && entry.toLowerCase() === tag.toLowerCase();
-  });
+function mapCatalogItemRow(row: CatalogItemRow) {
+  return {
+    ...row,
+    defaultUnitPrice: numericToNumber(row.defaultUnitPrice),
+    createdAt: toDate(row.createdAt),
+    updatedAt: toDate(row.updatedAt),
+  };
 }
 
 export async function listCatalogItems(
   userId: string,
   filters: ListCatalogItemFilters = {},
 ) {
-  const where: Prisma.CatalogItemWhereInput = { userId };
+  const params: unknown[] = [userId];
+  const where: string[] = ["user_id = $1"];
 
   if (filters.category?.trim()) {
-    where.category = filters.category.trim();
+    params.push(filters.category.trim());
+    where.push(`category = $${params.length}`);
   }
 
   if (filters.search?.trim()) {
-    const search = filters.search.trim();
-
-    where.OR = [
-      { name: { contains: search } },
-      { description: { contains: search } },
-    ];
+    const search = `%${filters.search.trim()}%`;
+    params.push(search);
+    const index = params.length;
+    where.push(`(name ILIKE $${index} OR description ILIKE $${index})`);
   }
 
-  const items = await prisma.catalogItem.findMany({
-    where,
-    orderBy: [{ category: "asc" }, { name: "asc" }],
-  });
-
-  if (!filters.tag?.trim()) {
-    return items;
+  if (filters.tag?.trim()) {
+    params.push(filters.tag.trim().toLowerCase());
+    where.push(`EXISTS (
+      SELECT 1 FROM jsonb_array_elements_text(tags::jsonb) AS tag
+      WHERE LOWER(tag) = $${params.length}
+    )`);
   }
 
-  const tag = filters.tag.trim();
+  const rows = await dbQuery<CatalogItemRow>(
+    `SELECT
+      id,
+      user_id AS "userId",
+      category,
+      tags,
+      name,
+      description,
+      default_unit AS "defaultUnit",
+      default_unit_price AS "defaultUnitPrice",
+      created_at AS "createdAt",
+      updated_at AS "updatedAt"
+    FROM catalog_items
+    WHERE ${where.join(" AND ")}
+    ORDER BY category ASC, name ASC`,
+    params,
+  );
 
-  return items.filter((item) => jsonArrayContainsTag(item.tags, tag));
+  return rows.map(mapCatalogItemRow);
 }
 
 export async function getCatalogItemById(userId: string, id: string) {
-  return prisma.catalogItem.findUnique({
-    where: {
-      id_userId: {
-        id,
-        userId,
-      },
-    },
-  });
+  const row = await dbQueryOne<CatalogItemRow>(
+    `SELECT
+      id,
+      user_id AS "userId",
+      category,
+      tags,
+      name,
+      description,
+      default_unit AS "defaultUnit",
+      default_unit_price AS "defaultUnitPrice",
+      created_at AS "createdAt",
+      updated_at AS "updatedAt"
+    FROM catalog_items
+    WHERE id = $1 AND user_id = $2
+    LIMIT 1`,
+    [id, userId],
+  );
+
+  return row ? mapCatalogItemRow(row) : null;
+}
+
+function normalizeCatalogItemData(data: Record<string, unknown>) {
+  return {
+    category: data.category,
+    tags: Array.isArray(data.tags) ? data.tags : [],
+    name: data.name,
+    description: data.description ?? null,
+    defaultUnit: data.defaultUnit,
+    defaultUnitPrice: data.defaultUnitPrice,
+  };
 }
 
 export async function createCatalogItem(
   userId: string,
-  data: Omit<Prisma.CatalogItemUncheckedCreateInput, "userId">,
+  data: Record<string, unknown>,
 ) {
-  return prisma.catalogItem.create({
-    data: {
-      ...data,
+  const input = normalizeCatalogItemData(data);
+
+  const row = await dbQueryOne<CatalogItemRow>(
+    `INSERT INTO catalog_items (
+      id,
+      user_id,
+      category,
+      tags,
+      name,
+      description,
+      default_unit,
+      default_unit_price
+    ) VALUES ($1,$2,$3,$4::jsonb,$5,$6,$7,$8)
+    RETURNING
+      id,
+      user_id AS "userId",
+      category,
+      tags,
+      name,
+      description,
+      default_unit AS "defaultUnit",
+      default_unit_price AS "defaultUnitPrice",
+      created_at AS "createdAt",
+      updated_at AS "updatedAt"`,
+    [
+      createEntityId("cat"),
       userId,
-    },
-  });
+      input.category,
+      JSON.stringify(input.tags),
+      input.name,
+      input.description,
+      input.defaultUnit,
+      input.defaultUnitPrice,
+    ],
+  );
+
+  if (!row) {
+    throw new Error("CATALOG_ITEM_CREATE_FAILED");
+  }
+
+  return mapCatalogItemRow(row);
 }
 
 export async function updateCatalogItem(
   userId: string,
   id: string,
-  data: Prisma.CatalogItemUpdateInput,
+  data: Record<string, unknown>,
 ) {
-  return prisma.catalogItem.update({
-    where: {
-      id_userId: {
+  const input = normalizeCatalogItemData(data);
+
+  const row = await dbQueryOne<CatalogItemRow>(
+    `UPDATE catalog_items
+      SET
+        category = $1,
+        tags = $2::jsonb,
+        name = $3,
+        description = $4,
+        default_unit = $5,
+        default_unit_price = $6,
+        updated_at = NOW()
+      WHERE id = $7 AND user_id = $8
+      RETURNING
         id,
-        userId,
-      },
-    },
-    data,
-  });
+        user_id AS "userId",
+        category,
+        tags,
+        name,
+        description,
+        default_unit AS "defaultUnit",
+        default_unit_price AS "defaultUnitPrice",
+        created_at AS "createdAt",
+        updated_at AS "updatedAt"`,
+    [
+      input.category,
+      JSON.stringify(input.tags),
+      input.name,
+      input.description,
+      input.defaultUnit,
+      input.defaultUnitPrice,
+      id,
+      userId,
+    ],
+  );
+
+  if (!row) {
+    throw createNotFoundError("CATALOG_ITEM_NOT_FOUND");
+  }
+
+  return mapCatalogItemRow(row);
 }
 
 export async function deleteCatalogItem(userId: string, id: string) {
-  return prisma.catalogItem.delete({
-    where: {
-      id_userId: {
-        id,
-        userId,
-      },
-    },
-  });
+  const row = await dbQueryOne<{ id: string }>(
+    `DELETE FROM catalog_items WHERE id = $1 AND user_id = $2 RETURNING id`,
+    [id, userId],
+  );
+
+  if (!row) {
+    throw createNotFoundError("CATALOG_ITEM_NOT_FOUND");
+  }
+
+  return row;
 }
 
 export async function listCatalogFacets(userId: string): Promise<{
   categories: string[];
   tags: string[];
 }> {
-  const items = await prisma.catalogItem.findMany({
-    where: { userId },
-    select: {
-      category: true,
-      tags: true,
-    },
-  });
+  const rows = await dbQuery<{ category: string; tags: unknown }>(
+    `SELECT category, tags
+     FROM catalog_items
+     WHERE user_id = $1`,
+    [userId],
+  );
 
   const categories = Array.from(
     new Set(
-      items
+      rows
         .map((item) => item.category.trim())
         .filter((category) => category.length > 0),
     ),
@@ -123,7 +238,7 @@ export async function listCatalogFacets(userId: string): Promise<{
 
   const tags = Array.from(
     new Set(
-      items.flatMap((item) => {
+      rows.flatMap((item) => {
         if (!Array.isArray(item.tags)) {
           return [];
         }

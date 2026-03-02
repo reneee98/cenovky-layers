@@ -47,7 +47,7 @@ export type QuoteVersionSnapshot = {
   };
   client: {
     id: string;
-    type: "company" | "person";
+    type: "company" | "sole_trader" | "person";
     name: string;
     billingAddressLine1: string;
     billingAddressLine2: string | null;

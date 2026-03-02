@@ -22,7 +22,11 @@ type SettingsFormValues = {
   companyEmail: string;
   companyPhone: string;
   companyWebsite: string | null;
+  companyIban: string | null;
+  companySwiftBic: string | null;
+  companyRegistrationNote: string | null;
   logoUrl: string | null;
+  companySignatureUrl: string | null;
   defaultLanguage: "sk" | "en";
   defaultCurrency: string;
   vatRate: string;
@@ -90,13 +94,17 @@ export function SettingsForm({
     <div className="space-y-6">
       <form
         action={saveAction}
-        encType="multipart/form-data"
         className="ui-page-section space-y-6"
       >
         <input
           type="hidden"
           name="current_logo_url"
           defaultValue={settings.logoUrl ?? ""}
+        />
+        <input
+          type="hidden"
+          name="current_signature_url"
+          defaultValue={settings.companySignatureUrl ?? ""}
         />
 
         <section>
@@ -190,6 +198,39 @@ export function SettingsForm({
               />
             </label>
 
+            <label className="text-sm text-slate-700">
+              IBAN (volitelne)
+              <input
+                name="company_iban"
+                type="text"
+                defaultValue={settings.companyIban ?? ""}
+                placeholder="SK00 0000 0000 0000 0000 0000"
+                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              />
+            </label>
+
+            <label className="text-sm text-slate-700">
+              SWIFT / BIC (volitelne)
+              <input
+                name="company_swift_bic"
+                type="text"
+                defaultValue={settings.companySwiftBic ?? ""}
+                placeholder="NBSBSKBX"
+                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              />
+            </label>
+
+            <label className="text-sm text-slate-700 md:col-span-2">
+              Poznamka k registracii firmy (volitelne)
+              <input
+                name="company_registration_note"
+                type="text"
+                defaultValue={settings.companyRegistrationNote ?? ""}
+                placeholder="napr. Zapisana v OR SR"
+                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              />
+            </label>
+
             <div className="text-sm text-slate-700 md:col-span-2">
               <span className="block">Logo firmy (volitelne)</span>
               <p className="mt-1 text-xs text-slate-500">
@@ -216,6 +257,34 @@ export function SettingsForm({
                 className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
               />
               <FieldError message={saveState.fieldErrors?.logo_file} />
+            </div>
+
+            <div className="text-sm text-slate-700 md:col-span-2">
+              <span className="block">Podpis do faktury (volitelne)</span>
+              <p className="mt-1 text-xs text-slate-500">
+                Tento podpis sa automaticky zobrazi v spodnej casti exportu faktury.
+              </p>
+              {settings.companySignatureUrl ? (
+                <div className="mt-2 rounded-md border border-slate-200 bg-slate-50 p-2">
+                  <Image
+                    src={settings.companySignatureUrl}
+                    alt="Podpis firmy"
+                    width={220}
+                    height={96}
+                    className="h-auto max-h-24 w-auto"
+                    unoptimized
+                  />
+                </div>
+              ) : (
+                <p className="mt-2 text-xs text-slate-500">Podpis este nie je nahraty.</p>
+              )}
+              <input
+                name="signature_file"
+                type="file"
+                accept="image/*"
+                className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              />
+              <FieldError message={saveState.fieldErrors?.signature_file} />
             </div>
           </div>
         </section>

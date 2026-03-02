@@ -1,11 +1,17 @@
 import { SettingsForm } from "@/app/settings/settings-form";
 import { AppShell } from "@/components/app-shell";
 import { requireUserId } from "@/lib/auth";
+import { runWithSupabaseAuth } from "@/lib/db";
 import { getSettings } from "@/server/repositories";
 
 export default async function SettingsPage() {
   const userId = await requireUserId();
-  const settings = await getSettings(userId);
+  let settings;
+  try {
+    settings = await runWithSupabaseAuth(userId, (client) => getSettings(userId, client));
+  } catch {
+    settings = await getSettings(userId);
+  }
   const currentYear = new Date().getFullYear();
 
   return (
@@ -26,7 +32,11 @@ export default async function SettingsPage() {
           companyEmail: settings.companyEmail,
           companyPhone: settings.companyPhone,
           companyWebsite: settings.companyWebsite,
+          companyIban: settings.companyIban ?? null,
+          companySwiftBic: settings.companySwiftBic ?? null,
+          companyRegistrationNote: settings.companyRegistrationNote ?? null,
           logoUrl: settings.logoUrl,
+          companySignatureUrl: settings.companySignatureUrl ?? null,
           defaultLanguage: settings.defaultLanguage,
           defaultCurrency: settings.defaultCurrency,
           vatRate: settings.vatRate.toString(),

@@ -35,6 +35,7 @@ yarn-error.log*
 /dev.db
 /dev.db-journal
 /storage
+/.tooling/node22/bin/node
 
 # vercel
 .vercel

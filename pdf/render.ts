@@ -1,4 +1,4 @@
-import { access, readFile } from "node:fs/promises";
+import { access, readFile, readdir } from "node:fs/promises";
 import { constants } from "node:fs";
 import { resolve } from "node:path";
 
@@ -623,8 +623,69 @@ async function ensureReadable(path: string): Promise<boolean> {
   }
 }
 
+function getPlaywrightCacheRoots(): string[] {
+  const roots: string[] = [];
+  const home = process.env.HOME;
+
+  if (home) {
+    roots.push(resolve(home, "Library/Caches/ms-playwright"));
+    roots.push(resolve(home, ".cache/ms-playwright"));
+  }
+
+  if (process.env.PLAYWRIGHT_BROWSERS_PATH) {
+    roots.push(process.env.PLAYWRIGHT_BROWSERS_PATH);
+  }
+
+  return roots;
+}
+
+async function findPlaywrightChromiumExecutableFromCache(): Promise<string | null> {
+  const platformCandidates =
+    process.platform === "darwin"
+      ? [
+          "chrome-mac/Chromium.app/Contents/MacOS/Chromium",
+          "chrome-mac-arm64/Chromium.app/Contents/MacOS/Chromium",
+          "chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing",
+          "chrome-mac/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing",
+        ]
+      : process.platform === "win32"
+        ? ["chrome-win/chrome.exe"]
+        : ["chrome-linux/chrome"];
+
+  for (const root of getPlaywrightCacheRoots()) {
+    let entries: string[] = [];
+    try {
+      entries = await readdir(root);
+    } catch {
+      continue;
+    }
+
+    const chromiumDirs = entries
+      .filter((entry) => entry.startsWith("chromium-"))
+      .sort()
+      .reverse();
+
+    for (const dir of chromiumDirs) {
+      for (const relExecPath of platformCandidates) {
+        const candidate = resolve(root, dir, relExecPath);
+        if (await ensureReadable(candidate)) {
+          return candidate;
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
 async function resolveChromeExecutablePath(): Promise<string | null> {
   if (cachedChromeExecutable !== undefined) {
+    return cachedChromeExecutable;
+  }
+
+  const playwrightExecutable = chromium.executablePath();
+  if (playwrightExecutable && (await ensureReadable(playwrightExecutable))) {
+    cachedChromeExecutable = playwrightExecutable;
     return cachedChromeExecutable;
   }
 
@@ -633,6 +694,12 @@ async function resolveChromeExecutablePath(): Promise<string | null> {
       cachedChromeExecutable = candidate;
       return cachedChromeExecutable;
     }
+  }
+
+  const playwrightCacheExecutable = await findPlaywrightChromiumExecutableFromCache();
+  if (playwrightCacheExecutable) {
+    cachedChromeExecutable = playwrightCacheExecutable;
+    return cachedChromeExecutable;
   }
 
   cachedChromeExecutable = null;

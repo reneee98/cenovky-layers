@@ -2,11 +2,11 @@ import type { Language as QuoteLanguage, QuoteStatus as QuoteStatusEnum, TotalDi
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 
+import { createEntityId, createNotFoundError, dbQuery, dbQueryOne, dbTransaction, toDate } from "@/lib/db";
+import { isDbKnownRequestError } from "@/lib/db-errors";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { isPrismaKnownRequestError } from "@/lib/prisma-errors";
 import { QUOTE_ITEM_SECTION_MARKER } from "@/lib/quotes/items";
 import { isQuoteStatus } from "@/lib/quotes/status";
-import { prisma } from "@/lib/prisma";
 
 type Language = QuoteLanguage;
 type QuoteStatus = QuoteStatusEnum;
@@ -236,88 +236,138 @@ export async function PATCH(
     .filter((item) => item.name.length > 0);
 
   try {
-    const updatedQuote = await prisma.$transaction(async (tx) => {
-      const ownedClient = await tx.client.findUnique({
-        where: {
-          id_userId: {
-            id: payload.clientId,
-            userId,
-          },
-        },
-        select: { id: true },
-      });
+    const updatedQuote = await dbTransaction(async (tx) => {
+      const ownedClient = await dbQueryOne<{ id: string }>(
+        `SELECT id
+         FROM clients
+         WHERE id = $1 AND user_id = $2
+         LIMIT 1`,
+        [payload.clientId, userId],
+        tx,
+      );
 
       if (!ownedClient) {
         throw new Error("CLIENT_NOT_FOUND");
       }
 
-      const updated = await tx.quote.update({
-        where: {
-          id_userId: {
-            id,
-            userId,
-          },
-        },
-        data: {
-          title: payload.title.trim(),
-          clientId: payload.clientId,
-          language: payload.language,
-          currency: payload.currency.trim().toUpperCase(),
-          validUntil: validUntilDate,
-          vatEnabled: payload.vatEnabled,
+      const updated = await dbQueryOne<{ id: string; updatedAt: Date | string }>(
+        `UPDATE quotes
+         SET
+           title = $1,
+           client_id = $2,
+           language = $3,
+           currency = $4,
+           valid_until = $5,
+           vat_enabled = $6,
+           vat_rate = $7,
+           status = $8,
+           show_client_details_in_pdf = $9,
+           show_company_details_in_pdf = $10,
+           intro_content_markdown = $11,
+           terms_content_markdown = $12,
+           revisions_included = $13,
+           total_discount_type = $14,
+           total_discount_value = $15,
+           updated_at = NOW()
+         WHERE id = $16 AND user_id = $17
+         RETURNING id, updated_at AS "updatedAt"`,
+        [
+          payload.title.trim(),
+          payload.clientId,
+          payload.language,
+          payload.currency.trim().toUpperCase(),
+          validUntilDate,
+          payload.vatEnabled,
           vatRate,
-          status: payload.status,
-          showClientDetailsInPdf: payload.showClientDetailsInPdf,
-          showCompanyDetailsInPdf: payload.showCompanyDetailsInPdf,
-          introContentMarkdown: payload.introContentMarkdown,
-          termsContentMarkdown: payload.termsContentMarkdown,
+          payload.status,
+          payload.showClientDetailsInPdf,
+          payload.showCompanyDetailsInPdf,
+          payload.introContentMarkdown,
+          payload.termsContentMarkdown,
           revisionsIncluded,
-          totalDiscountType: payload.totalDiscountType,
+          payload.totalDiscountType,
           totalDiscountValue,
-        },
-      });
+          id,
+          userId,
+        ],
+        tx,
+      );
 
-      await tx.quoteItem.deleteMany({
-        where: {
-          userId,
-          quoteId: id,
-        },
-      });
-      await tx.scopeItem.deleteMany({
-        where: {
-          userId,
-          quoteId: id,
-        },
-      });
+      if (!updated) {
+        throw createNotFoundError("QUOTE_NOT_FOUND");
+      }
+
+      await dbQuery(
+        `DELETE FROM quote_items
+         WHERE user_id = $1 AND quote_id = $2`,
+        [userId, id],
+        tx,
+      );
+      await dbQuery(
+        `DELETE FROM scope_items
+         WHERE user_id = $1 AND quote_id = $2`,
+        [userId, id],
+        tx,
+      );
 
       if (items.length > 0) {
-        await tx.quoteItem.createMany({
-          data: items.map((item, index) => ({
-            userId,
-            quoteId: id,
-            name: item.name,
-            description: item.description,
-            unit: item.unit,
-            qty: item.qty,
-            unitPrice: item.unitPrice,
-            discountPct: item.discountPct,
-            sortOrder: index,
-          })),
-        });
+        for (const [index, item] of items.entries()) {
+          await dbQuery(
+            `INSERT INTO quote_items (
+              id,
+              user_id,
+              quote_id,
+              name,
+              description,
+              unit,
+              qty,
+              unit_price,
+              discount_pct,
+              sort_order
+            ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+            [
+              createEntityId("qit"),
+              userId,
+              id,
+              item.name,
+              item.description,
+              item.unit,
+              item.qty,
+              item.unitPrice,
+              item.discountPct,
+              index,
+            ],
+            tx,
+          );
+        }
       }
 
       if (payload.scopeItems.length > 0) {
-        await tx.scopeItem.createMany({
-          data: payload.scopeItems.map((scopeItem, index) => ({
-            userId,
-            quoteId: id,
-            category: scopeItem.category,
-            itemKey: scopeItem.itemKey,
-            label: scopeItem.label,
-            description: scopeItem.description,
-            sortOrder: index,
-          })),
-        });
+        for (const [index, scopeItem] of payload.scopeItems.entries()) {
+          await dbQuery(
+            `INSERT INTO scope_items (
+              id,
+              user_id,
+              quote_id,
+              category,
+              item_key,
+              label,
+              description,
+              sort_order
+            ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+            [
+              createEntityId("scp"),
+              userId,
+              id,
+              scopeItem.category,
+              scopeItem.itemKey,
+              scopeItem.label,
+              scopeItem.description,
+              index,
+            ],
+            tx,
+          );
+        }
       }
 
       return updated;
@@ -328,7 +378,7 @@ export async function PATCH(
 
     return NextResponse.json({
       ok: true,
-      updatedAt: updatedQuote.updatedAt.toISOString(),
+      updatedAt: toDate(updatedQuote.updatedAt).toISOString(),
     });
   } catch (error) {
     if (error instanceof Error && error.message === "CLIENT_NOT_FOUND") {
@@ -338,7 +388,7 @@ export async function PATCH(
       );
     }
 
-    if (isPrismaKnownRequestError(error, "P2025")) {
+    if (isDbKnownRequestError(error, "P2025")) {
       return NextResponse.json({ error: "Ponuka nebola najdena." }, { status: 404 });
     }
 

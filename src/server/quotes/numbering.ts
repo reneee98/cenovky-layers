@@ -1,14 +1,22 @@
-import { prisma } from "@/lib/prisma";
+import { dbQueryOne, dbTransaction } from "@/lib/db";
 
 function formatQuoteNumber(year: number, counter: number): string {
   return `${year}-${String(counter).padStart(3, "0")}`;
 }
 
 export async function reserveNextQuoteNumber(userId: string): Promise<string> {
-  return prisma.$transaction(async (tx) => {
-    const settings = await tx.settings.findUnique({
-      where: { userId },
-    });
+  return dbTransaction(async (tx) => {
+    const settings = await dbQueryOne<{
+      numberingYear: number;
+      numberingCounter: number;
+    }>(
+      `SELECT numbering_year AS "numberingYear", numbering_counter AS "numberingCounter"
+       FROM settings
+       WHERE user_id = $1
+       LIMIT 1`,
+      [userId],
+      tx,
+    );
 
     if (!settings) {
       throw new Error("Settings are not initialized for the current user.");
@@ -18,13 +26,14 @@ export async function reserveNextQuoteNumber(userId: string): Promise<string> {
     let quoteNumber = formatQuoteNumber(settings.numberingYear, nextCounter);
 
     for (;;) {
-      const existing = await tx.quote.findFirst({
-        where: {
-          userId,
-          number: quoteNumber,
-        },
-        select: { id: true },
-      });
+      const existing = await dbQueryOne<{ id: string }>(
+        `SELECT id
+         FROM quotes
+         WHERE user_id = $1 AND number = $2
+         LIMIT 1`,
+        [userId, quoteNumber],
+        tx,
+      );
 
       if (!existing) {
         break;
@@ -34,12 +43,12 @@ export async function reserveNextQuoteNumber(userId: string): Promise<string> {
       quoteNumber = formatQuoteNumber(settings.numberingYear, nextCounter);
     }
 
-    await tx.settings.update({
-      where: { userId },
-      data: {
-        numberingCounter: nextCounter,
-      },
-    });
+    await tx.query(
+      `UPDATE settings
+       SET numbering_counter = $1
+       WHERE user_id = $2`,
+      [nextCounter, userId],
+    );
 
     return quoteNumber;
   });

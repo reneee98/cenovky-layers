@@ -23,7 +23,8 @@ type SettingsFormFieldErrors = Partial<
     | "vat_rate"
     | "numbering_year"
     | "numbering_counter"
-    | "logo_file",
+    | "logo_file"
+    | "signature_file",
     string
   >
 >;
@@ -36,14 +37,16 @@ type SettingsActionState = {
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const LOGO_UPLOAD_DIRECTORY = join(process.cwd(), "public", "uploads", "logos");
+const SIGNATURE_UPLOAD_DIRECTORY = join(process.cwd(), "public", "uploads", "signatures");
 const MAX_LOGO_SIZE_BYTES = 5 * 1024 * 1024;
-const ALLOWED_LOGO_MIME_TO_EXTENSION: Record<string, ".png" | ".jpg" | ".webp" | ".svg"> = {
+const MAX_SIGNATURE_SIZE_BYTES = 5 * 1024 * 1024;
+const ALLOWED_IMAGE_MIME_TO_EXTENSION: Record<string, ".png" | ".jpg" | ".webp" | ".svg"> = {
   "image/png": ".png",
   "image/jpeg": ".jpg",
   "image/webp": ".webp",
   "image/svg+xml": ".svg",
 };
-const ALLOWED_LOGO_EXTENSIONS = new Set([".png", ".jpg", ".jpeg", ".webp", ".svg"]);
+const ALLOWED_IMAGE_EXTENSIONS = new Set([".png", ".jpg", ".jpeg", ".webp", ".svg"]);
 
 function readRequiredString(
   formData: FormData,
@@ -67,10 +70,10 @@ function readOptionalString(formData: FormData, field: string): string | null {
   return value.length > 0 ? value : null;
 }
 
-function getLogoFileExtension(file: File): ".png" | ".jpg" | ".webp" | ".svg" | null {
+function getImageFileExtension(file: File): ".png" | ".jpg" | ".webp" | ".svg" | null {
   const extension = extname(file.name).toLowerCase();
 
-  if (extension && ALLOWED_LOGO_EXTENSIONS.has(extension)) {
+  if (extension && ALLOWED_IMAGE_EXTENSIONS.has(extension)) {
     if (extension === ".jpeg") {
       return ".jpg";
     }
@@ -79,19 +82,24 @@ function getLogoFileExtension(file: File): ".png" | ".jpg" | ".webp" | ".svg" | 
   }
 
   const mimeType = file.type.toLowerCase();
-  return ALLOWED_LOGO_MIME_TO_EXTENSION[mimeType] ?? null;
+  return ALLOWED_IMAGE_MIME_TO_EXTENSION[mimeType] ?? null;
 }
 
-async function storeLogoFile(file: File, extension: ".png" | ".jpg" | ".webp" | ".svg"): Promise<string> {
+async function storeImageFile(
+  file: File,
+  extension: ".png" | ".jpg" | ".webp" | ".svg",
+  uploadDirectory: string,
+  publicPrefix: string,
+): Promise<string> {
   const filename = `${Date.now()}-${randomUUID()}${extension}`;
-  const fullPath = join(LOGO_UPLOAD_DIRECTORY, filename);
+  const fullPath = join(uploadDirectory, filename);
 
-  await mkdir(LOGO_UPLOAD_DIRECTORY, { recursive: true });
+  await mkdir(uploadDirectory, { recursive: true });
 
   const bytes = Buffer.from(await file.arrayBuffer());
   await writeFile(fullPath, bytes);
 
-  return `/uploads/logos/${filename}`;
+  return `${publicPrefix}/${filename}`;
 }
 
 export async function saveSettingsAction(
@@ -110,6 +118,9 @@ export async function saveSettingsAction(
   const companyDic = readOptionalString(formData, "company_dic");
   const companyIcdph = readOptionalString(formData, "company_icdph");
   const companyWebsite = readOptionalString(formData, "company_website");
+  const companyIban = readOptionalString(formData, "company_iban");
+  const companySwiftBic = readOptionalString(formData, "company_swift_bic");
+  const companyRegistrationNote = readOptionalString(formData, "company_registration_note");
 
   const defaultLanguageInput = readRequiredString(
     formData,
@@ -155,21 +166,49 @@ export async function saveSettingsAction(
 
   const logoFileEntry = formData.get("logo_file");
   const currentLogoUrl = readOptionalString(formData, "current_logo_url");
+  const signatureFileEntry = formData.get("signature_file");
+  const currentSignatureUrl = readOptionalString(formData, "current_signature_url");
 
   let logoUrl = currentLogoUrl;
+  let companySignatureUrl = currentSignatureUrl;
 
   if (logoFileEntry instanceof File && logoFileEntry.size > 0) {
     if (logoFileEntry.size > MAX_LOGO_SIZE_BYTES) {
       errors.logo_file = "Logo musi mat najviac 5 MB.";
     }
 
-    const logoExtension = getLogoFileExtension(logoFileEntry);
+    const logoExtension = getImageFileExtension(logoFileEntry);
     if (!logoExtension) {
       errors.logo_file = "Podporovane formaty loga: PNG, JPG, WEBP, SVG.";
     }
 
     if (!errors.logo_file && logoExtension) {
-      logoUrl = await storeLogoFile(logoFileEntry, logoExtension);
+      logoUrl = await storeImageFile(
+        logoFileEntry,
+        logoExtension,
+        LOGO_UPLOAD_DIRECTORY,
+        "/uploads/logos",
+      );
+    }
+  }
+
+  if (signatureFileEntry instanceof File && signatureFileEntry.size > 0) {
+    if (signatureFileEntry.size > MAX_SIGNATURE_SIZE_BYTES) {
+      errors.signature_file = "Podpis musi mat najviac 5 MB.";
+    }
+
+    const signatureExtension = getImageFileExtension(signatureFileEntry);
+    if (!signatureExtension) {
+      errors.signature_file = "Podporovane formaty podpisu: PNG, JPG, WEBP, SVG.";
+    }
+
+    if (!errors.signature_file && signatureExtension) {
+      companySignatureUrl = await storeImageFile(
+        signatureFileEntry,
+        signatureExtension,
+        SIGNATURE_UPLOAD_DIRECTORY,
+        "/uploads/signatures",
+      );
     }
   }
 
@@ -190,7 +229,11 @@ export async function saveSettingsAction(
     companyEmail,
     companyPhone,
     companyWebsite,
+    companyIban,
+    companySwiftBic,
+    companyRegistrationNote,
     logoUrl,
+    companySignatureUrl,
     defaultLanguage,
     defaultCurrency,
     vatRate,

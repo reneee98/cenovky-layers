@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { requireUserId } from "@/lib/auth";
-import { isPrismaKnownRequestError } from "@/lib/prisma-errors";
+import { isDbKnownRequestError } from "@/lib/db-errors";
 import { createSnippet, deleteSnippet, updateSnippet } from "@/server/repositories";
 
 type Language = SnippetLanguage;
@@ -102,7 +102,7 @@ export async function saveSnippetAction(
       });
     }
   } catch (error) {
-    if (isPrismaKnownRequestError(error, "P2025")) {
+    if (isDbKnownRequestError(error, "P2025")) {
       return {
         status: "error",
         message: "Sablona nebola najdena.",
@@ -137,7 +137,7 @@ export async function deleteSnippetAction(formData: FormData): Promise<void> {
   try {
     await deleteSnippet(userId, snippetId);
   } catch (error) {
-    if (isPrismaKnownRequestError(error, "P2025")) {
+    if (isDbKnownRequestError(error, "P2025")) {
       redirect(buildSnippetsUrl({ error: "Sablona nebola najdena." }));
     }
 

@@ -1,5 +1,4 @@
 import type { Language as SettingsLanguage } from "@/types/domain";
-import type { Prisma } from "@/types/prisma";
 
 type Language = SettingsLanguage;
 
@@ -10,7 +9,18 @@ export const DEFAULT_SETTINGS_VAT_RATE = 20;
 export function buildDefaultSettingsCreateInput(
   userId: string,
   currentYear = new Date().getFullYear(),
-): Prisma.SettingsUncheckedCreateInput {
+): {
+  userId: string;
+  companyName: string;
+  companyAddress: string;
+  companyEmail: string;
+  companyPhone: string;
+  defaultLanguage: Language;
+  defaultCurrency: string;
+  vatRate: number;
+  numberingYear: number;
+  numberingCounter: number;
+} {
   return {
     userId,
     companyName: "Your Company",

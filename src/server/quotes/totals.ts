@@ -1,5 +1,3 @@
-import type { Prisma } from "@/types/prisma";
-
 import {
   calculateQuoteTotals as calculateQuoteTotalsFromNumbers,
   type QuoteTotalDiscountType,
@@ -7,20 +5,20 @@ import {
 } from "@/lib/quotes/totals";
 
 type QuoteLineLike = {
-  qty: Prisma.Decimal | number;
-  unitPrice: Prisma.Decimal | number;
-  discountPct: Prisma.Decimal | number;
+  qty: number | { toNumber: () => number };
+  unitPrice: number | { toNumber: () => number };
+  discountPct: number | { toNumber: () => number };
 };
 
 type QuoteTotalsInput = {
   items: QuoteLineLike[];
   totalDiscountType: QuoteTotalDiscountType;
-  totalDiscountValue: Prisma.Decimal | number;
+  totalDiscountValue: number | { toNumber: () => number };
   vatEnabled: boolean;
-  vatRate: Prisma.Decimal | number;
+  vatRate: number | { toNumber: () => number };
 };
 
-function toNumber(value: Prisma.Decimal | number): number {
+function toNumber(value: number | { toNumber: () => number }): number {
   if (typeof value === "number") {
     return value;
   }

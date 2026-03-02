@@ -24,6 +24,20 @@ export default function NewClientPage() {
           contactName: "",
           contactEmail: "",
           contactPhone: "",
+          companyName: "",
+          firstName: "",
+          lastName: "",
+          billingStreet: "",
+          billingCity: "",
+          billingZip: "",
+          billingCountry: "",
+          icDph: "",
+          vatPayer: false,
+          taxRegimeDefault: "",
+          defaultCurrency: "",
+          defaultDueDays: 14,
+          defaultPaymentMethod: "bank_transfer",
+          notes: "",
         }}
       />
     </AppShell>

@@ -10,7 +10,7 @@ import {
   deleteCatalogItem,
   updateCatalogItem,
 } from "@/server/repositories";
-import { isPrismaKnownRequestError } from "@/lib/prisma-errors";
+import { isDbKnownRequestError } from "@/lib/db-errors";
 
 type Unit = CatalogUnit;
 
@@ -140,7 +140,7 @@ export async function saveCatalogItemAction(
       });
     }
   } catch (error) {
-    if (isPrismaKnownRequestError(error, "P2025")) {
+    if (isDbKnownRequestError(error, "P2025")) {
       return {
         status: "error",
         message: "Katalogova polozka nebola najdena.",
@@ -176,7 +176,7 @@ export async function deleteCatalogItemAction(formData: FormData): Promise<void>
   try {
     await deleteCatalogItem(userId, itemId);
   } catch (error) {
-    if (isPrismaKnownRequestError(error, "P2025")) {
+    if (isDbKnownRequestError(error, "P2025")) {
       redirect(buildCatalogUrl({ error: "Katalogova polozka nebola najdena." }));
     }
 

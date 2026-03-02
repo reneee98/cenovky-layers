@@ -15,11 +15,40 @@ function isAuthPage(pathname: string): boolean {
   return pathname.startsWith(AUTH_PATH_PREFIX);
 }
 
+async function resolveAuthSessionWithTimeout(
+  request: NextRequest,
+  timeoutMs = 2500,
+): Promise<Awaited<ReturnType<typeof updateAuthSession>> | null> {
+  try {
+    return await Promise.race([
+      updateAuthSession(request),
+      new Promise<null>((resolve) => {
+        setTimeout(() => resolve(null), timeoutMs);
+      }),
+    ]);
+  } catch (error) {
+    console.error("Middleware: auth session failed", error);
+    return null;
+  }
+}
+
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
-  const { response, user } = await updateAuthSession(request);
-
   const isPublicAuthPath = PUBLIC_AUTH_PATHS.has(pathname);
+
+  // Never block login/signup pages on auth-provider roundtrips.
+  if (isPublicAuthPath) {
+    return NextResponse.next({ request });
+  }
+
+  let user: Awaited<ReturnType<typeof updateAuthSession>>["user"] = null;
+  let response = NextResponse.next({ request });
+
+  const sessionResult = await resolveAuthSessionWithTimeout(request);
+  if (sessionResult) {
+    response = sessionResult.response;
+    user = sessionResult.user;
+  }
 
   if (!user && !isPublicAuthPath) {
     const redirectUrl = request.nextUrl.clone();

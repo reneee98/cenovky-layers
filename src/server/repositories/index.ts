@@ -5,3 +5,5 @@ export * from "@/server/repositories/snippet.repository";
 export * from "@/server/repositories/quote.repository";
 export * from "@/server/repositories/quote-item.repository";
 export * from "@/server/repositories/quote-version.repository";
+export * from "@/server/repositories/invoice.repository";
+export * from "@/server/repositories/payment.repository";

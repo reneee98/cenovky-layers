@@ -13,7 +13,8 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=...
 Run in Supabase SQL editor:
 
 1. `sql/supabase_auth_owner_migration.sql`
-2. `sql/supabase_rls_policies.sql`
+2. `sql/supabase_invoices_module_migration.sql`
+3. `sql/supabase_rls_policies.sql`
 
 Legacy data note:
 - existing pre-auth offers are tagged as `legacy-user`

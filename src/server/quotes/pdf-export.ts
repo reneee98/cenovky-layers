@@ -1,8 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { extname, resolve, sep } from "node:path";
 
-import type { Prisma } from "@/types/prisma";
-
 import { formatCurrency, formatDate } from "@/lib/format";
 import { isQuoteItemSectionDescription } from "@/lib/quotes/items";
 import { calculateLineTotal } from "@/lib/quotes/totals";
@@ -54,8 +52,8 @@ export type QuoteVersionDownloadPayload = {
   versionNumber: number;
 };
 
-function decimalToNumber(value: Prisma.Decimal): number {
-  return value.toNumber();
+function decimalToNumber(value: number): number {
+  return value;
 }
 
 function normalizeFileName(value: string): string {
@@ -267,7 +265,7 @@ export async function exportQuoteToPdfVersion(
   const createdVersion = await createOrReplaceSingleQuoteVersion(
     userId,
     quote.id,
-    snapshot as Prisma.InputJsonValue,
+    snapshot,
     "__pending__",
   );
   const pdfFileReference = buildQuoteVersionPdfReference(

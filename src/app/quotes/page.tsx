@@ -36,6 +36,7 @@ import {
   listQuotesWithDetails,
 } from "@/server/repositories";
 import { calculateQuoteTotals } from "@/server/quotes/totals";
+import { listQuotesWithInvoicingMetrics } from "@/server/invoices/quote-metrics";
 
 type QuoteStatus = QuoteStatusEnum;
 
@@ -106,7 +107,7 @@ export default async function QuotesPage({ searchParams }: QuotesPageProps) {
     status || clientId || currency || dateFrom || dateTo || search,
   );
 
-  const [quotes, clients, currencies] = await Promise.all([
+  const [quotes, clients, currencies, invoicingMetrics] = await Promise.all([
     listQuotesWithDetails(userId, {
       status,
       clientId,
@@ -117,7 +118,12 @@ export default async function QuotesPage({ searchParams }: QuotesPageProps) {
     }),
     listClients(userId),
     listQuoteCurrencies(userId),
+    listQuotesWithInvoicingMetrics(userId),
   ]);
+
+  const metricsByQuoteId = new Map(
+    invoicingMetrics.map((metric) => [metric.quoteId, metric]),
+  );
 
   return (
     <AppShell
@@ -242,6 +248,24 @@ export default async function QuotesPage({ searchParams }: QuotesPageProps) {
                           {formatCurrency(totals.taxableBase, quote.currency)}
                         </dd>
                       </div>
+                      <div className="flex items-center justify-between gap-3">
+                        <dt>Fakturovane</dt>
+                        <dd className="text-right text-slate-900">
+                          {formatCurrency(
+                            metricsByQuoteId.get(quote.id)?.invoicedAmount ?? 0,
+                            quote.currency,
+                          )}
+                        </dd>
+                      </div>
+                      <div className="flex items-center justify-between gap-3">
+                        <dt>Zostava</dt>
+                        <dd className="text-right text-slate-900">
+                          {formatCurrency(
+                            metricsByQuoteId.get(quote.id)?.remainingToInvoice ?? totals.grandTotal,
+                            quote.currency,
+                          )}
+                        </dd>
+                      </div>
                     </dl>
                     <div className="mt-3 flex flex-wrap gap-2">
                       <Link
@@ -307,6 +331,8 @@ export default async function QuotesPage({ searchParams }: QuotesPageProps) {
                       <th className="ui-table-cell--text">Vytvorena</th>
                       <th className="ui-table-cell--text">Platna do</th>
                       <th className="ui-table-cell--number">Spolu bez DPH</th>
+                      <th className="ui-table-cell--number">Fakturovane</th>
+                      <th className="ui-table-cell--number">Zostava</th>
                       <th className="ui-table-cell--number">Mena</th>
                       <th className="ui-table-cell--number">Akcie</th>
                     </tr>
@@ -334,6 +360,18 @@ export default async function QuotesPage({ searchParams }: QuotesPageProps) {
                           <td className="ui-table-cell--text">{formatDate(quote.validUntil)}</td>
                           <td className="ui-table-cell--number ui-table-cell--strong">
                             {formatCurrency(totals.taxableBase, quote.currency)}
+                          </td>
+                          <td className="ui-table-cell--number">
+                            {formatCurrency(
+                              metricsByQuoteId.get(quote.id)?.invoicedAmount ?? 0,
+                              quote.currency,
+                            )}
+                          </td>
+                          <td className="ui-table-cell--number">
+                            {formatCurrency(
+                              metricsByQuoteId.get(quote.id)?.remainingToInvoice ?? totals.grandTotal,
+                              quote.currency,
+                            )}
                           </td>
                           <td className="ui-table-cell--number">{quote.currency}</td>
                           <td className="ui-table-cell--number">

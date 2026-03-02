@@ -74,6 +74,7 @@ create unique index if not exists quote_versions_user_id_quote_id_version_number
 
 -- 6) Replace foreign keys with owner-scoped foreign keys.
 alter table public.quotes drop constraint if exists quotes_client_id_fkey;
+alter table public.quotes drop constraint if exists quotes_client_id_user_id_fkey;
 alter table public.quotes
   add constraint quotes_client_id_user_id_fkey
   foreign key (client_id, user_id)
@@ -82,6 +83,7 @@ alter table public.quotes
   on update cascade;
 
 alter table public.quote_items drop constraint if exists quote_items_quote_id_fkey;
+alter table public.quote_items drop constraint if exists quote_items_quote_id_user_id_fkey;
 alter table public.quote_items
   add constraint quote_items_quote_id_user_id_fkey
   foreign key (quote_id, user_id)
@@ -90,6 +92,7 @@ alter table public.quote_items
   on update cascade;
 
 alter table public.scope_items drop constraint if exists scope_items_quote_id_fkey;
+alter table public.scope_items drop constraint if exists scope_items_quote_id_user_id_fkey;
 alter table public.scope_items
   add constraint scope_items_quote_id_user_id_fkey
   foreign key (quote_id, user_id)
@@ -98,6 +101,7 @@ alter table public.scope_items
   on update cascade;
 
 alter table public.quote_versions drop constraint if exists quote_versions_quote_id_fkey;
+alter table public.quote_versions drop constraint if exists quote_versions_quote_id_user_id_fkey;
 alter table public.quote_versions
   add constraint quote_versions_quote_id_user_id_fkey
   foreign key (quote_id, user_id)

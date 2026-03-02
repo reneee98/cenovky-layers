@@ -1,5 +1,4 @@
 import Link from "next/link";
-import type { Prisma } from "@/types/prisma";
 
 import { deleteCatalogItemAction } from "@/app/catalog/actions";
 import { DeleteCatalogItemButton } from "@/app/catalog/delete-catalog-item-button";
@@ -17,7 +16,7 @@ import {
 import { formatNumber } from "@/lib/format";
 import { listCatalogFacets, listCatalogItems } from "@/server/repositories";
 
-function extractTags(tagsValue: Prisma.JsonValue): string[] {
+function extractTags(tagsValue: unknown): string[] {
   if (!Array.isArray(tagsValue)) {
     return [];
   }
@@ -142,7 +141,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
                       <div>
                         <dt>Cena</dt>
                         <dd className="mt-0.5 text-slate-900">
-                          {formatNumber(item.defaultUnitPrice.toNumber())}
+                          {formatNumber(item.defaultUnitPrice)}
                         </dd>
                       </div>
                     </dl>
@@ -216,7 +215,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
                           </td>
                           <td className="ui-table-cell--text">{item.defaultUnit}</td>
                           <td className="ui-table-cell--number ui-table-cell--strong">
-                            {formatNumber(item.defaultUnitPrice.toNumber())}
+                            {formatNumber(item.defaultUnitPrice)}
                           </td>
                           <td className="ui-table-cell--number">
                             <div className="ui-table-actions">
