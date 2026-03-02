@@ -525,7 +525,9 @@ export async function getInvoicePdfDownloadPayload(
     footerPage: "Strana 1/1",
   };
 
-  const allowLegacyFallback = process.env.INVOICE_PDF_ALLOW_FALLBACK === "1";
+  // Keep invoice export functional even when Chrome/Chromium is unavailable (common on some hosted runtimes).
+  // Set INVOICE_PDF_ALLOW_FALLBACK=0 to force strict HTML renderer mode.
+  const allowLegacyFallback = process.env.INVOICE_PDF_ALLOW_FALLBACK !== "0";
 
   try {
     const bytes = await renderInvoicePdfFromTemplate(templateSnapshot);
