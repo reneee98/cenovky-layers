@@ -74,6 +74,7 @@ const migrationFiles = [
   "supabase_auth_owner_migration.sql",
   "supabase_invoices_module_migration.sql",
   "supabase_settings_supplier_fields.sql",
+  "supabase_storage_company_assets.sql",
   "supabase_rls_policies.sql",
 ];
 

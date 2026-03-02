@@ -3,6 +3,7 @@ import { AppShell } from "@/components/app-shell";
 import { requireUserId } from "@/lib/auth";
 import { runWithSupabaseAuth } from "@/lib/db";
 import { getSettings } from "@/server/repositories";
+import { resolveCompanyAssetPreviewUrl } from "@/server/storage/company-assets";
 
 export default async function SettingsPage() {
   const userId = await requireUserId();
@@ -12,6 +13,10 @@ export default async function SettingsPage() {
   } catch {
     settings = await getSettings(userId);
   }
+  const [logoPreviewUrl, signaturePreviewUrl] = await Promise.all([
+    resolveCompanyAssetPreviewUrl(settings.logoUrl),
+    resolveCompanyAssetPreviewUrl(settings.companySignatureUrl ?? null),
+  ]);
   const currentYear = new Date().getFullYear();
 
   return (
@@ -35,8 +40,8 @@ export default async function SettingsPage() {
           companyIban: settings.companyIban ?? null,
           companySwiftBic: settings.companySwiftBic ?? null,
           companyRegistrationNote: settings.companyRegistrationNote ?? null,
-          logoUrl: settings.logoUrl,
-          companySignatureUrl: settings.companySignatureUrl ?? null,
+          logoUrl: logoPreviewUrl,
+          companySignatureUrl: signaturePreviewUrl,
           defaultLanguage: settings.defaultLanguage,
           defaultCurrency: settings.defaultCurrency,
           vatRate: settings.vatRate.toString(),

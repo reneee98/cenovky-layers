@@ -1,5 +1,3 @@
-import { readFile } from "node:fs/promises";
-import { extname, resolve, sep } from "node:path";
 import { PDFDocument, rgb, StandardFonts, type PDFFont, type PDFPage } from "pdf-lib";
 import QRCode from "qrcode";
 import {
@@ -11,6 +9,7 @@ import { numericToNumber } from "@/lib/db";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { buildPayBySquarePayload } from "@/server/invoices/pay-by-square";
 import { buildSupplierSnapshot } from "@/server/invoices/snapshots";
+import { resolveImageDataUrl } from "@/server/pdf/image-data-url";
 import { getInvoiceWithRelations, getSettings } from "@/server/repositories";
 import type { PoolClient } from "pg";
 
@@ -241,45 +240,6 @@ function buildFileName(invoiceNumber: string): string {
   return `${safe || "invoice"}.pdf`;
 }
 
-async function loadImageDataUrlFromPublicPath(imageUrl: string | null): Promise<string | null> {
-  if (!imageUrl || !imageUrl.startsWith("/")) {
-    return null;
-  }
-
-  const extension = extname(imageUrl).toLowerCase();
-  const mimeType =
-    extension === ".png"
-      ? "image/png"
-      : extension === ".jpg" || extension === ".jpeg"
-        ? "image/jpeg"
-        : extension === ".webp"
-          ? "image/webp"
-          : extension === ".svg"
-            ? "image/svg+xml"
-            : null;
-
-  if (!mimeType) {
-    return null;
-  }
-
-  const publicRoot = resolve(process.cwd(), "public");
-  const absoluteImagePath = resolve(publicRoot, imageUrl.replace(/^\/+/, ""));
-
-  if (
-    absoluteImagePath !== publicRoot &&
-    !absoluteImagePath.startsWith(`${publicRoot}${sep}`)
-  ) {
-    return null;
-  }
-
-  try {
-    const imageBuffer = await readFile(absoluteImagePath);
-    return `data:${mimeType};base64,${imageBuffer.toString("base64")}`;
-  } catch {
-    return null;
-  }
-}
-
 function getClientDisplayName(client: ClientSnapshot, fallback: string): string {
   return (
     normalizeText(client.displayName) ||
@@ -346,8 +306,8 @@ export async function getInvoicePdfDownloadPayload(
 
   const currentSettings = await getSettings(userId, txClient);
   const supplier = buildSupplierSnapshot(currentSettings);
-  const logoDataUrl = await loadImageDataUrlFromPublicPath(currentSettings.logoUrl);
-  const signatureDataUrl = await loadImageDataUrlFromPublicPath(
+  const logoDataUrl = await resolveImageDataUrl(currentSettings.logoUrl);
+  const signatureDataUrl = await resolveImageDataUrl(
     currentSettings.companySignatureUrl ?? null,
   );
 

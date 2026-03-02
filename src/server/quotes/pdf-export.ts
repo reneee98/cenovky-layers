@@ -1,9 +1,7 @@
-import { readFile } from "node:fs/promises";
-import { extname, resolve, sep } from "node:path";
-
 import { formatCurrency, formatDate } from "@/lib/format";
 import { isQuoteItemSectionDescription } from "@/lib/quotes/items";
 import { calculateLineTotal } from "@/lib/quotes/totals";
+import { resolveImageDataUrl } from "@/server/pdf/image-data-url";
 import {
   createOrReplaceSingleQuoteVersion,
   getQuoteVersionById,
@@ -27,6 +25,7 @@ const LOCALE_BY_LANGUAGE: Record<QuoteVersionSnapshot["quote"]["language"], stri
   sk: "sk-SK",
   en: "en-GB",
 };
+const SUPPORTED_LOGO_MIME_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "image/svg+xml"]);
 
 function getPdfLocale(language: QuoteVersionSnapshot["quote"]["language"]): string {
   return LOCALE_BY_LANGUAGE[language];
@@ -203,45 +202,24 @@ function toSnapshot(
 }
 
 async function loadLogoImageFromSettings(logoUrl: string | null): Promise<SnapshotLogoImage> {
-  if (!logoUrl || !logoUrl.startsWith("/")) {
+  const dataUrl = await resolveImageDataUrl(logoUrl);
+  if (!dataUrl) {
     return null;
   }
 
-  const extension = extname(logoUrl).toLowerCase();
-  const mimeType =
-    extension === ".png"
-      ? "image/png"
-      : extension === ".jpg" || extension === ".jpeg"
-        ? "image/jpeg"
-        : extension === ".webp"
-          ? "image/webp"
-          : extension === ".svg"
-            ? "image/svg+xml"
-        : null;
-
-  if (!mimeType) {
+  const matched = dataUrl.match(/^data:([^;,]+);base64,(.+)$/i);
+  if (!matched) {
+    return null;
+  }
+  const mimeType = matched[1].toLowerCase();
+  if (!SUPPORTED_LOGO_MIME_TYPES.has(mimeType)) {
     return null;
   }
 
-  const publicRoot = resolve(process.cwd(), "public");
-  const absoluteLogoPath = resolve(publicRoot, logoUrl.replace(/^\/+/, ""));
-
-  if (
-    absoluteLogoPath !== publicRoot &&
-    !absoluteLogoPath.startsWith(`${publicRoot}${sep}`)
-  ) {
-    return null;
-  }
-
-  try {
-    const logoBuffer = await readFile(absoluteLogoPath);
-    return {
-      mimeType,
-      base64: logoBuffer.toString("base64"),
-    };
-  } catch {
-    return null;
-  }
+  return {
+    mimeType: mimeType as NonNullable<SnapshotLogoImage>["mimeType"],
+    base64: matched[2],
+  };
 }
 
 export async function exportQuoteToPdfVersion(

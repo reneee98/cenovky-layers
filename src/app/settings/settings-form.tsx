@@ -96,17 +96,6 @@ export function SettingsForm({
         action={saveAction}
         className="ui-page-section space-y-6"
       >
-        <input
-          type="hidden"
-          name="current_logo_url"
-          defaultValue={settings.logoUrl ?? ""}
-        />
-        <input
-          type="hidden"
-          name="current_signature_url"
-          defaultValue={settings.companySignatureUrl ?? ""}
-        />
-
         <section>
           <h2 className="text-sm font-semibold text-slate-900">Firma a logo</h2>
           <div className="mt-3 grid gap-4 md:grid-cols-2">

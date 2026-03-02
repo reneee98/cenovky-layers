@@ -1,14 +1,16 @@
 "use server";
 
-import { randomUUID } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
-import { extname, join } from "node:path";
-
 import type { Language as SettingsLanguage } from "@/types/domain";
 import { revalidatePath } from "next/cache";
 
 import { requireUserId } from "@/lib/auth";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getSettings, updateSettings } from "@/server/repositories";
+import {
+  deleteCompanyAssetByReference,
+  uploadCompanyImageAsset,
+  uploadCompanyImageAssetWithClient,
+} from "@/server/storage/company-assets";
 
 type Language = SettingsLanguage;
 
@@ -36,17 +38,8 @@ type SettingsActionState = {
 };
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const LOGO_UPLOAD_DIRECTORY = join(process.cwd(), "public", "uploads", "logos");
-const SIGNATURE_UPLOAD_DIRECTORY = join(process.cwd(), "public", "uploads", "signatures");
 const MAX_LOGO_SIZE_BYTES = 5 * 1024 * 1024;
 const MAX_SIGNATURE_SIZE_BYTES = 5 * 1024 * 1024;
-const ALLOWED_IMAGE_MIME_TO_EXTENSION: Record<string, ".png" | ".jpg" | ".webp" | ".svg"> = {
-  "image/png": ".png",
-  "image/jpeg": ".jpg",
-  "image/webp": ".webp",
-  "image/svg+xml": ".svg",
-};
-const ALLOWED_IMAGE_EXTENSIONS = new Set([".png", ".jpg", ".jpeg", ".webp", ".svg"]);
 
 function readRequiredString(
   formData: FormData,
@@ -70,43 +63,13 @@ function readOptionalString(formData: FormData, field: string): string | null {
   return value.length > 0 ? value : null;
 }
 
-function getImageFileExtension(file: File): ".png" | ".jpg" | ".webp" | ".svg" | null {
-  const extension = extname(file.name).toLowerCase();
-
-  if (extension && ALLOWED_IMAGE_EXTENSIONS.has(extension)) {
-    if (extension === ".jpeg") {
-      return ".jpg";
-    }
-
-    return extension as ".png" | ".jpg" | ".webp" | ".svg";
-  }
-
-  const mimeType = file.type.toLowerCase();
-  return ALLOWED_IMAGE_MIME_TO_EXTENSION[mimeType] ?? null;
-}
-
-async function storeImageFile(
-  file: File,
-  extension: ".png" | ".jpg" | ".webp" | ".svg",
-  uploadDirectory: string,
-  publicPrefix: string,
-): Promise<string> {
-  const filename = `${Date.now()}-${randomUUID()}${extension}`;
-  const fullPath = join(uploadDirectory, filename);
-
-  await mkdir(uploadDirectory, { recursive: true });
-
-  const bytes = Buffer.from(await file.arrayBuffer());
-  await writeFile(fullPath, bytes);
-
-  return `${publicPrefix}/${filename}`;
-}
-
 export async function saveSettingsAction(
   _previousState: SettingsActionState,
   formData: FormData,
 ): Promise<SettingsActionState> {
   const userId = await requireUserId();
+  const currentSettings = await getSettings(userId);
+  let supabaseServerClient: Awaited<ReturnType<typeof createSupabaseServerClient>> | null = null;
   const errors: SettingsFormFieldErrors = {};
 
   const companyName = readRequiredString(formData, "company_name", errors);
@@ -165,30 +128,45 @@ export async function saveSettingsAction(
   }
 
   const logoFileEntry = formData.get("logo_file");
-  const currentLogoUrl = readOptionalString(formData, "current_logo_url");
   const signatureFileEntry = formData.get("signature_file");
-  const currentSignatureUrl = readOptionalString(formData, "current_signature_url");
 
-  let logoUrl = currentLogoUrl;
-  let companySignatureUrl = currentSignatureUrl;
+  let logoUrl = currentSettings.logoUrl;
+  let companySignatureUrl = currentSettings.companySignatureUrl ?? null;
+  let previousLogoForCleanup: string | null = null;
+  let previousSignatureForCleanup: string | null = null;
 
   if (logoFileEntry instanceof File && logoFileEntry.size > 0) {
     if (logoFileEntry.size > MAX_LOGO_SIZE_BYTES) {
       errors.logo_file = "Logo musi mat najviac 5 MB.";
     }
 
-    const logoExtension = getImageFileExtension(logoFileEntry);
-    if (!logoExtension) {
-      errors.logo_file = "Podporovane formaty loga: PNG, JPG, WEBP, SVG.";
-    }
+    if (!errors.logo_file) {
+      let uploadResult = await uploadCompanyImageAsset({
+        userId,
+        file: logoFileEntry,
+        kind: "logo",
+      });
 
-    if (!errors.logo_file && logoExtension) {
-      logoUrl = await storeImageFile(
-        logoFileEntry,
-        logoExtension,
-        LOGO_UPLOAD_DIRECTORY,
-        "/uploads/logos",
-      );
+      if (!uploadResult.ok && uploadResult.reason === "missing_admin_client") {
+        if (!supabaseServerClient) {
+          supabaseServerClient = await createSupabaseServerClient();
+        }
+        uploadResult = await uploadCompanyImageAssetWithClient(supabaseServerClient, {
+          userId,
+          file: logoFileEntry,
+          kind: "logo",
+        });
+      }
+
+      if (!uploadResult.ok) {
+        errors.logo_file =
+          uploadResult.reason === "unsupported_type"
+            ? "Podporovane formaty loga: PNG, JPG, WEBP, SVG."
+            : "Nepodarilo sa nahrat logo do Supabase Storage.";
+      } else {
+        previousLogoForCleanup = logoUrl;
+        logoUrl = uploadResult.reference;
+      }
     }
   }
 
@@ -197,18 +175,33 @@ export async function saveSettingsAction(
       errors.signature_file = "Podpis musi mat najviac 5 MB.";
     }
 
-    const signatureExtension = getImageFileExtension(signatureFileEntry);
-    if (!signatureExtension) {
-      errors.signature_file = "Podporovane formaty podpisu: PNG, JPG, WEBP, SVG.";
-    }
+    if (!errors.signature_file) {
+      let uploadResult = await uploadCompanyImageAsset({
+        userId,
+        file: signatureFileEntry,
+        kind: "signature",
+      });
 
-    if (!errors.signature_file && signatureExtension) {
-      companySignatureUrl = await storeImageFile(
-        signatureFileEntry,
-        signatureExtension,
-        SIGNATURE_UPLOAD_DIRECTORY,
-        "/uploads/signatures",
-      );
+      if (!uploadResult.ok && uploadResult.reason === "missing_admin_client") {
+        if (!supabaseServerClient) {
+          supabaseServerClient = await createSupabaseServerClient();
+        }
+        uploadResult = await uploadCompanyImageAssetWithClient(supabaseServerClient, {
+          userId,
+          file: signatureFileEntry,
+          kind: "signature",
+        });
+      }
+
+      if (!uploadResult.ok) {
+        errors.signature_file =
+          uploadResult.reason === "unsupported_type"
+            ? "Podporovane formaty podpisu: PNG, JPG, WEBP, SVG."
+            : "Nepodarilo sa nahrat podpis do Supabase Storage.";
+      } else {
+        previousSignatureForCleanup = companySignatureUrl;
+        companySignatureUrl = uploadResult.reference;
+      }
     }
   }
 
@@ -240,6 +233,12 @@ export async function saveSettingsAction(
     numberingYear,
     numberingCounter,
   });
+
+  // Best-effort cleanup starych assetov po uspesnom ulozeni.
+  await Promise.all([
+    deleteCompanyAssetByReference(previousLogoForCleanup),
+    deleteCompanyAssetByReference(previousSignatureForCleanup),
+  ]);
 
   revalidatePath("/settings");
 
