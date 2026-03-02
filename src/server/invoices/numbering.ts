@@ -1,13 +1,5 @@
 import { dbQuery } from "@/lib/db";
 
-function startOfYearUtc(year: number): Date {
-  return new Date(Date.UTC(year, 0, 1, 0, 0, 0, 0));
-}
-
-function endOfYearUtc(year: number): Date {
-  return new Date(Date.UTC(year + 1, 0, 1, 0, 0, 0, 0));
-}
-
 export function formatInvoiceNumber(year: number, counter: number): string {
   return `${year}-${String(counter).padStart(3, "0")}`;
 }
@@ -39,10 +31,8 @@ export async function reserveNextInvoiceNumber(
   const rows = await dbQuery<{ invoiceNumber: string }>(
     `SELECT invoice_number AS "invoiceNumber"
      FROM invoices
-     WHERE user_id = $1
-       AND issue_date >= $2
-       AND issue_date < $3`,
-    [userId, startOfYearUtc(targetYear), endOfYearUtc(targetYear)],
+     WHERE user_id = $1`,
+    [userId],
   );
 
   let maxCounter = 0;

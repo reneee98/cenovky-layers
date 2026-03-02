@@ -322,6 +322,7 @@ export async function createInvoiceFromQuoteAction(formData: FormData): Promise<
 
   const paymentMethod = readOptionalFormString(formData, "payment_method") ?? "bank_transfer";
   const note = readOptionalFormString(formData, "note");
+  const invoiceNumberInput = readOptionalFormString(formData, "invoice_number");
   const variableSymbol = readOptionalFormString(formData, "variable_symbol");
 
   let items: InvoiceItemInput[];
@@ -370,7 +371,7 @@ export async function createInvoiceFromQuoteAction(formData: FormData): Promise<
     ];
   }
 
-  const invoiceNumber = await reserveNextInvoiceNumber(userId, issueDate);
+  const invoiceNumber = invoiceNumberInput ?? await reserveNextInvoiceNumber(userId, issueDate);
   const variableSymbolFinal = variableSymbol ?? buildDefaultVariableSymbol(invoiceNumber);
 
   try {

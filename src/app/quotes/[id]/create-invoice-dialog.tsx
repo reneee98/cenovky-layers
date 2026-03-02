@@ -91,6 +91,7 @@ export function CreateInvoiceFromQuoteDialog({
   const [dueDate, setDueDate] = useState(
     toDateInputValue(getDefaultDueDate(today, defaultDueDays)),
   );
+  const [invoiceNumber, setInvoiceNumber] = useState(suggestedInvoiceNumber);
 
   const taxableSupplyDate = issueDate;
   const dueDateMin = issueDate;
@@ -112,6 +113,7 @@ export function CreateInvoiceFromQuoteDialog({
       setPartialAmountRaw("");
       setIssueDate(toDateInputValue(today));
       setDueDate(toDateInputValue(getDefaultDueDate(today, defaultDueDays)));
+      setInvoiceNumber(suggestedInvoiceNumber);
     }
     onOpenChange(next);
   };
@@ -236,16 +238,15 @@ export function CreateInvoiceFromQuoteDialog({
             <Label htmlFor="invoice_number">Číslo faktúry</Label>
             <Input
               id="invoice_number"
-              name="invoice_number_display"
+              name="invoice_number"
               type="text"
-              value={suggestedInvoiceNumber}
-              readOnly
-              disabled
-              className="bg-slate-100"
+              value={invoiceNumber}
+              onChange={(event) => setInvoiceNumber(event.target.value)}
+              required
               aria-describedby="invoice_number_hint"
             />
             <p id="invoice_number_hint" className="text-xs text-slate-500">
-              Pridelí sa automaticky podľa dátumu vystavenia.
+              Predvyplnené podľa posledného čísla, môžete upraviť ručne.
             </p>
           </div>
 
