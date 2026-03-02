@@ -35,7 +35,14 @@ yarn-error.log*
 /dev.db
 /dev.db-journal
 /storage
-/.tooling/node22/bin/node
+/.cursor/
+/.tmp-light/
+/.tmp-oxide/
+/.tooling/node22/
+/public/uploads/
+/tmp-*.pdf
+/lightningcss-darwin-arm64-1.30.2.tgz
+/tailwindcss-oxide-darwin-arm64-4.1.18.tgz
 
 # vercel
 .vercel
