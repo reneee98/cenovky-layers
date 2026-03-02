@@ -175,45 +175,76 @@ function prepareInvoicePayload(input: UpsertInvoiceInput): PreparedInvoicePayloa
   };
 }
 
-async function resolveLinkedEntities(
+type InvoiceClientRow = {
+  id: string;
+  userId: string;
+  type: "company" | "sole_trader" | "person";
+  name: string;
+  billingAddressLine1: string;
+  billingAddressLine2: string | null;
+  city: string;
+  zip: string;
+  country: string;
+  ico: string | null;
+  dic: string | null;
+  icdph: string | null;
+  contactName: string;
+  contactEmail: string;
+  contactPhone: string | null;
+  companyName: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  billingStreet: string | null;
+  billingCity: string | null;
+  billingZip: string | null;
+  billingCountry: string | null;
+  icDph: string | null;
+  vatPayer: boolean;
+  taxRegimeDefault: string | null;
+  defaultCurrency: string | null;
+  defaultDueDays: number | null;
+  defaultPaymentMethod: string | null;
+  notes: string | null;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+};
+
+type InvoiceQuoteRow = {
+  id: string;
+  userId: string;
+  currency: string;
+  vatEnabled: boolean;
+  vatRate: number | string;
+  totalDiscountType: "none" | "pct" | "amount";
+  totalDiscountValue: number | string;
+};
+
+type InvoiceSettingsRow = {
+  id: number;
+  userId: string;
+  companyName: string;
+  companyAddress: string;
+  companyIco: string | null;
+  companyDic: string | null;
+  companyIcdph: string | null;
+  companyEmail: string;
+  companyPhone: string;
+  companyWebsite: string | null;
+  logoUrl: string | null;
+  defaultLanguage: "sk" | "en";
+  defaultCurrency: string;
+  vatRate: number | string;
+  numberingYear: number;
+  numberingCounter: number;
+};
+
+async function fetchInvoiceClient(
   tx: PoolClient,
   userId: string,
-  payload: PreparedInvoicePayload,
-) {
-  const [client, quote, settings] = await Promise.all([
-    dbQueryOne<{
-      id: string;
-      userId: string;
-      type: "company" | "sole_trader" | "person";
-      name: string;
-      billingAddressLine1: string;
-      billingAddressLine2: string | null;
-      city: string;
-      zip: string;
-      country: string;
-      ico: string | null;
-      dic: string | null;
-      icdph: string | null;
-      contactName: string;
-      contactEmail: string;
-      contactPhone: string | null;
-      companyName: string | null;
-      firstName: string | null;
-      lastName: string | null;
-      billingStreet: string | null;
-      billingCity: string | null;
-      billingZip: string | null;
-      billingCountry: string | null;
-      icDph: string | null;
-      vatPayer: boolean;
-      taxRegimeDefault: string | null;
-      defaultCurrency: string | null;
-      defaultDueDays: number | null;
-      defaultPaymentMethod: string | null;
-      notes: string | null;
-      createdAt: Date | string;
-      updatedAt: Date | string;
-    }>(
+  clientId: string,
+): Promise<InvoiceClientRow | null> {
+  try {
+    return await dbQueryOne<InvoiceClientRow>(
       `SELECT
         id,
         user_id AS "userId",
@@ -249,75 +280,169 @@ async function resolveLinkedEntities(
       FROM clients
       WHERE id = $1 AND user_id = $2
       LIMIT 1`,
-      [payload.clientId, userId],
+      [clientId, userId],
       tx,
-    ),
-    payload.quoteId
-      ? dbQueryOne<{
-          id: string;
-          userId: string;
-          currency: string;
-          vatEnabled: boolean;
-          vatRate: number | string;
-          totalDiscountType: "none" | "pct" | "amount";
-          totalDiscountValue: number | string;
-        }>(
-          `SELECT
-            id,
-            user_id AS "userId",
-            currency,
-            vat_enabled AS "vatEnabled",
-            vat_rate AS "vatRate",
-            total_discount_type AS "totalDiscountType",
-            total_discount_value AS "totalDiscountValue"
-          FROM quotes
-          WHERE id = $1 AND user_id = $2
-          LIMIT 1`,
-          [payload.quoteId, userId],
-          tx,
-        )
-      : Promise.resolve(null),
-    dbQueryOne<{
-      id: number;
+    );
+  } catch {
+    const minimal = await dbQueryOne<{
+      id: string;
       userId: string;
-      companyName: string;
-      companyAddress: string;
-      companyIco: string | null;
-      companyDic: string | null;
-      companyIcdph: string | null;
-      companyEmail: string;
-      companyPhone: string;
-      companyWebsite: string | null;
-      logoUrl: string | null;
-      defaultLanguage: "sk" | "en";
-      defaultCurrency: string;
-      vatRate: number | string;
-      numberingYear: number;
-      numberingCounter: number;
+      type: "company" | "sole_trader" | "person";
+      name: string;
+      billingAddressLine1: string;
+      billingAddressLine2: string | null;
+      city: string;
+      zip: string;
+      country: string;
+      ico: string | null;
+      dic: string | null;
+      icdph: string | null;
+      contactName: string;
+      contactEmail: string;
+      contactPhone: string | null;
+      createdAt: Date | string;
+      updatedAt: Date | string;
     }>(
       `SELECT
         id,
         user_id AS "userId",
-        company_name AS "companyName",
-        company_address AS "companyAddress",
-        company_ico AS "companyIco",
-        company_dic AS "companyDic",
-        company_icdph AS "companyIcdph",
-        company_email AS "companyEmail",
-        company_phone AS "companyPhone",
-        company_website AS "companyWebsite",
-        logo_url AS "logoUrl",
-        default_language AS "defaultLanguage",
-        default_currency AS "defaultCurrency",
-        vat_rate AS "vatRate",
-        numbering_year AS "numberingYear",
-        numbering_counter AS "numberingCounter"
-      FROM settings
-      WHERE user_id = $1
+        type,
+        name,
+        billing_address_line1 AS "billingAddressLine1",
+        billing_address_line2 AS "billingAddressLine2",
+        city,
+        zip,
+        country,
+        ico,
+        dic,
+        icdph,
+        contact_name AS "contactName",
+        contact_email AS "contactEmail",
+        contact_phone AS "contactPhone",
+        created_at AS "createdAt",
+        updated_at AS "updatedAt"
+      FROM clients
+      WHERE id = $1 AND user_id = $2
       LIMIT 1`,
-      [userId],
+      [clientId, userId],
       tx,
-    ),
+    );
+
+    if (!minimal) {
+      return null;
+    }
+
+    return {
+      ...minimal,
+      companyName: null,
+      firstName: null,
+      lastName: null,
+      billingStreet: minimal.billingAddressLine1,
+      billingCity: minimal.city,
+      billingZip: minimal.zip,
+      billingCountry: minimal.country,
+      icDph: minimal.icdph,
+      vatPayer: false,
+      taxRegimeDefault: null,
+      defaultCurrency: null,
+      defaultDueDays: null,
+      defaultPaymentMethod: null,
+      notes: null,
+    };
+  }
+}
+
+async function fetchInvoiceQuote(
+  tx: PoolClient,
+  userId: string,
+  quoteId: string | null,
+): Promise<InvoiceQuoteRow | null> {
+  if (!quoteId) {
+    return null;
+  }
+
+  try {
+    return await dbQueryOne<InvoiceQuoteRow>(
+      `SELECT
+        id,
+        user_id AS "userId",
+        currency,
+        vat_enabled AS "vatEnabled",
+        vat_rate AS "vatRate",
+        total_discount_type AS "totalDiscountType",
+        total_discount_value AS "totalDiscountValue"
+      FROM quotes
+      WHERE id = $1 AND user_id = $2
+      LIMIT 1`,
+      [quoteId, userId],
+      tx,
+    );
+  } catch {
+    const minimal = await dbQueryOne<{ id: string; userId: string; currency: string }>(
+      `SELECT
+        id,
+        user_id AS "userId",
+        currency
+      FROM quotes
+      WHERE id = $1 AND user_id = $2
+      LIMIT 1`,
+      [quoteId, userId],
+      tx,
+    );
+
+    if (!minimal) {
+      return null;
+    }
+
+    return {
+      ...minimal,
+      vatEnabled: true,
+      vatRate: 0,
+      totalDiscountType: "none",
+      totalDiscountValue: 0,
+    };
+  }
+}
+
+async function fetchInvoiceSettings(
+  tx: PoolClient,
+  userId: string,
+): Promise<InvoiceSettingsRow | null> {
+  return dbQueryOne<InvoiceSettingsRow>(
+    `SELECT
+      id,
+      user_id AS "userId",
+      company_name AS "companyName",
+      company_address AS "companyAddress",
+      company_ico AS "companyIco",
+      company_dic AS "companyDic",
+      company_icdph AS "companyIcdph",
+      company_email AS "companyEmail",
+      company_phone AS "companyPhone",
+      company_website AS "companyWebsite",
+      logo_url AS "logoUrl",
+      default_language AS "defaultLanguage",
+      default_currency AS "defaultCurrency",
+      vat_rate AS "vatRate",
+      numbering_year AS "numberingYear",
+      numbering_counter AS "numberingCounter"
+    FROM settings
+    WHERE user_id = $1
+    LIMIT 1`,
+    [userId],
+    tx,
+  );
+}
+
+async function resolveLinkedEntities(
+  tx: PoolClient,
+  userId: string,
+  payload: PreparedInvoicePayload,
+) {
+  const [client, quote, settings] = await Promise.all([
+    fetchInvoiceClient(tx, userId, payload.clientId),
+    fetchInvoiceQuote(tx, userId, payload.quoteId),
+    fetchInvoiceSettings(tx, userId),
   ]);
 
   if (!client) {

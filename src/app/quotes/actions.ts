@@ -239,6 +239,52 @@ function readOptionalFormString(formData: FormData, field: string): string | nul
   return value.length > 0 ? value : null;
 }
 
+function getErrorCode(error: unknown): string | null {
+  if (!error || typeof error !== "object") {
+    return null;
+  }
+
+  const code = (error as { code?: unknown }).code;
+  return typeof code === "string" ? code : null;
+}
+
+function mapInvoiceCreateErrorToMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  const code = getErrorCode(error);
+
+  switch (code) {
+    case "P2025":
+      return "Ponuka alebo klient neboli najdeni.";
+    case "P2002":
+      return "Cislo faktury uz existuje. Skuste vytvorit fakturu znovu.";
+    case "P2003":
+      return "Nie je mozne ulozit fakturu kvôli neplatnemu prepojeniu na klienta alebo ponuku.";
+    case "42703":
+    case "42P01":
+      return "Databazova schema pre faktury nie je aktualna. Spustite SQL migracie a skuste to znova.";
+    default:
+      break;
+  }
+
+  switch (message) {
+    case "CLIENT_BILLING_IDENTITY_REQUIRED":
+      return "Doplnte fakturacne udaje klienta pred vytvorenim faktury.";
+    case "QUOTE_REMAINING_EXCEEDED":
+      return "Suma faktury presahuje zostavajucu sumu na fakturaciu.";
+    case "SETTINGS_NOT_FOUND":
+    case "SETTINGS_INIT_FAILED":
+      return "Chybaju firemne nastavenia. Otvorte Nastavenia a ulozte profil firmy.";
+    case "QUOTE_CURRENCY_MISMATCH":
+      return "Mena faktury musi byt rovnaka ako mena ponuky.";
+    case "INVALID_DATE":
+      return "Niektory z datumov je neplatny.";
+    case "PAYMENT_METHOD_REQUIRED":
+      return "Sposob uhrady je povinny.";
+    default:
+      return "Operaciu sa nepodarilo vykonat.";
+  }
+}
+
 export async function createInvoiceFromQuoteAction(formData: FormData): Promise<never> {
   const userId = await requireUserId();
 
@@ -351,16 +397,13 @@ export async function createInvoiceFromQuoteAction(formData: FormData): Promise<
     revalidatePath(buildQuoteBuilderUrl(quoteId));
     redirect(`/invoices/${invoice.id}?notice=Faktura bola vytvorena z ponuky.`);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    if (message === "CLIENT_BILLING_IDENTITY_REQUIRED") {
-      redirect(buildQuoteBuilderUrl(quoteId, { error: "Doplnte fakturacne udaje klienta pred vytvorenim faktury." }));
-    }
-    if (message === "QUOTE_REMAINING_EXCEEDED") {
-      redirect(buildQuoteBuilderUrl(quoteId, { error: "Suma faktury presahuje zostavajucu sumu na fakturaciu." }));
-    }
-    if (isDbKnownRequestError(error, "P2025")) {
-      redirect(buildQuoteBuilderUrl(quoteId, { error: "Ponuka alebo klient neboli najdeni." }));
-    }
-    throw error;
+    console.error("createInvoiceFromQuoteAction failed", {
+      userId,
+      quoteId,
+      invoiceKind,
+      errorCode: getErrorCode(error),
+      errorMessage: error instanceof Error ? error.message : String(error),
+    });
+    redirect(buildQuoteBuilderUrl(quoteId, { error: mapInvoiceCreateErrorToMessage(error) }));
   }
 }

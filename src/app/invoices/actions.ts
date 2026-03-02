@@ -157,8 +157,30 @@ function parseItems(formData: FormData, errors: InvoiceFormFieldErrors) {
   return items;
 }
 
+function getErrorCode(error: unknown): string | null {
+  if (!error || typeof error !== "object") {
+    return null;
+  }
+
+  const code = (error as { code?: unknown }).code;
+  return typeof code === "string" ? code : null;
+}
+
 function mapInvoiceErrorToMessage(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
+  const code = getErrorCode(error);
+
+  switch (code) {
+    case "42703":
+    case "42P01":
+      return "Databazova schema pre faktury nie je aktualna. Spustite SQL migracie a skuste to znova.";
+    case "22007":
+    case "22008":
+    case "22P02":
+      return "Niektory z datumov alebo ciselnych hodnot je neplatny.";
+    default:
+      break;
+  }
 
   switch (message) {
     case "CLIENT_NOT_FOUND":
@@ -309,6 +331,15 @@ export async function saveInvoiceAction(
       }),
     );
   } catch (error) {
+    console.error("saveInvoiceAction failed", {
+      userId,
+      invoiceId,
+      quoteId: quoteIdRaw,
+      clientId,
+      errorCode: getErrorCode(error),
+      errorMessage: error instanceof Error ? error.message : String(error),
+    });
+
     if (isRedirectError(error)) {
       throw error;
     }
