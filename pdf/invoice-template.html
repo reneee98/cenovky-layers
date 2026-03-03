@@ -9,9 +9,9 @@
     </style>
   </head>
   <body>
-    <main class="invoice-doc">
-      <header class="invoice-head">
-        <div class="brand">{{LOGO_HTML}}</div>
+    <main class="invoice-doc {{DOC_CLASS_NAMES}}">
+      <header class="{{INVOICE_HEAD_CLASS}}">
+        <div class="brand {{BRAND_CLASS}}">{{LOGO_HTML}}</div>
         <div class="invoice-title-wrap">
           <h1 class="invoice-title">{{INVOICE_TITLE}}</h1>
         </div>
@@ -69,7 +69,7 @@
       </section>
 
       <section class="totals-wrap">
-        <table class="vat-summary">
+        <table class="vat-summary {{VAT_SUMMARY_CLASS}}">
           <thead>
             <tr>
               <th>{{VAT_SUMMARY_RATE}}</th>

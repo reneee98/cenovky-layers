@@ -401,6 +401,7 @@ export async function getInvoicePdfDownloadPayload(
     invoiceNumber: invoice.invoiceNumber,
     brandName: normalizeText(supplier.companyName, "Cenovka"),
     logoDataUrl,
+    vatEnabled: invoice.vatEnabled,
     signatureDataUrl,
     supplierLines,
     clientLines,

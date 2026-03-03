@@ -82,6 +82,7 @@ export type InvoiceTemplateSnapshot = {
   invoiceNumber: string;
   brandName: string;
   logoDataUrl: string | null;
+  vatEnabled: boolean;
   signatureDataUrl: string | null;
   supplierLines: string[];
   clientLines: string[];
@@ -141,14 +142,12 @@ function buildBillingLinesHtml(lines: string[]): string {
     .join("\n");
 }
 
-function buildLogoHtml(logoDataUrl: string | null, fallbackBrandName: string): string {
+function buildLogoHtml(logoDataUrl: string | null): string {
   if (logoDataUrl && normalizeWhitespace(logoDataUrl).length > 0) {
     return `<img class="brand-logo-image invoice-brand-logo-image" src="${escapeHtml(logoDataUrl)}" alt="Logo" />`;
   }
 
-  return `<p class="brand-logo-fallback invoice-brand-logo-fallback">${escapeHtml(
-    ensureNonEmpty(fallbackBrandName, "Cenovka"),
-  )}</p>`;
+  return "";
 }
 
 function buildSignatureHtml(signatureDataUrl: string | null): string {
@@ -318,11 +317,19 @@ function buildTemplateHtml(snapshot: InvoiceTemplateSnapshot, template: CachedTe
     Boolean(snapshot.payment.swiftBic) ||
     Boolean(snapshot.payment.variableSymbol) ||
     Boolean(snapshot.payment.qrDataUrl);
+  const vatEnabled = snapshot.vatEnabled;
+  const hasLogo = Boolean(snapshot.logoDataUrl && normalizeWhitespace(snapshot.logoDataUrl).length > 0);
+  const note = snapshot.note ?? (vatEnabled ? null : "Nie sme platiteľmi DPH.");
+  const documentClassNames = vatEnabled ? "" : "no-vat";
+  const invoiceHeadClassNames = hasLogo ? "invoice-head" : "invoice-head no-logo";
 
   const replacementMap: Record<string, string> = {
     INLINE_CSS: template.css,
     DOCUMENT_TITLE: escapeHtml(`Faktúra ${ensureNonEmpty(snapshot.invoiceNumber)}`),
-    LOGO_HTML: buildLogoHtml(snapshot.logoDataUrl, snapshot.brandName),
+    DOC_CLASS_NAMES: documentClassNames,
+    INVOICE_HEAD_CLASS: invoiceHeadClassNames,
+    BRAND_CLASS: hasLogo ? "" : "is-hidden",
+    LOGO_HTML: buildLogoHtml(snapshot.logoDataUrl),
     BRAND_NAME: escapeHtml(ensureNonEmpty(snapshot.brandName)),
     INVOICE_TITLE: escapeHtml(`FAKTÚRA ${ensureNonEmpty(snapshot.invoiceNumber)}`),
     SUPPLIER_HEADING: "DODÁVATEĽ",
@@ -333,9 +340,9 @@ function buildTemplateHtml(snapshot: InvoiceTemplateSnapshot, template: CachedTe
     ITEM_COL_NO: "Č.",
     ITEM_COL_NAME: "Názov",
     ITEM_COL_QTY: "Množstvo",
-    ITEM_COL_PRICE: "Cena bez DPH",
+    ITEM_COL_PRICE: vatEnabled ? "Cena bez DPH" : "Jednotková cena",
     ITEM_COL_VAT: "DPH %",
-    ITEM_COL_TOTAL: "Spolu s DPH",
+    ITEM_COL_TOTAL: vatEnabled ? "Spolu s DPH" : "Celkom",
     ITEM_ROWS_HTML: buildItemRowsHtml(snapshot.items),
     VAT_SUMMARY_RATE: "Sadzba DPH",
     VAT_SUMMARY_BASE: "Základ",
@@ -343,10 +350,11 @@ function buildTemplateHtml(snapshot: InvoiceTemplateSnapshot, template: CachedTe
     VAT_SUMMARY_TOTAL: "Spolu",
     VAT_SUMMARY_SUM: "Súčet",
     VAT_SUMMARY_ROWS_HTML: buildVatSummaryRowsHtml(snapshot.vatSummaryRows),
+    VAT_SUMMARY_CLASS: vatEnabled ? "" : "is-hidden",
     TOTAL_TAX_BASE: escapeHtml(ensureNonEmpty(snapshot.totals.taxBase)),
     TOTAL_VAT: escapeHtml(ensureNonEmpty(snapshot.totals.vat)),
     TOTAL_GRAND: escapeHtml(ensureNonEmpty(snapshot.totals.grandTotal)),
-    TOTAL_LABEL: "Spolu",
+    TOTAL_LABEL: vatEnabled ? "Spolu" : "Celková suma",
     TOTAL_GRAND_WITH_CURRENCY: escapeHtml(ensureNonEmpty(snapshot.totals.grandTotalWithCurrency)),
     PAYMENT_SECTION_CLASS: hasPaymentSection ? "" : "is-hidden",
     PAYMENT_LINES_HTML: buildPaymentLinesHtml(snapshot.payment),
@@ -357,9 +365,9 @@ function buildTemplateHtml(snapshot: InvoiceTemplateSnapshot, template: CachedTe
     LEGAL_NOTE_SECTION_CLASS: snapshot.legalNote ? "" : "is-hidden",
     LEGAL_NOTE_TITLE: "Právna poznámka",
     LEGAL_NOTE_HTML: buildNoteHtml(snapshot.legalNote),
-    NOTE_SECTION_CLASS: snapshot.note ? "" : "is-hidden",
+    NOTE_SECTION_CLASS: note ? "" : "is-hidden",
     NOTE_TITLE: "Poznámka",
-    NOTE_HTML: buildNoteHtml(snapshot.note),
+    NOTE_HTML: buildNoteHtml(note),
     NOTES_SECTION_CLASS: snapshot.legalNote ? "" : "is-hidden",
     SIGNATURE_HTML: buildSignatureHtml(snapshot.signatureDataUrl),
     FOOTER_REGISTRATION_LINE: escapeHtml(ensureNonEmpty(snapshot.footerRegistrationLine)),

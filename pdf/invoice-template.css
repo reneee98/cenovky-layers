@@ -29,6 +29,10 @@ body {
   margin-bottom: 7.8mm;
 }
 
+.invoice-head.no-logo {
+  justify-content: flex-start;
+}
+
 .brand {
   min-height: 14mm;
   display: flex;
@@ -54,6 +58,10 @@ body {
 .invoice-title-wrap {
   display: inline-flex;
   align-items: center;
+}
+
+.invoice-head.no-logo .invoice-title-wrap {
+  margin-left: 0;
 }
 
 .invoice-title {
@@ -263,6 +271,11 @@ body {
 .items-table .col-total {
   width: 16%;
   font-weight: 700;
+}
+
+.invoice-doc.no-vat .items-table col.col-vat,
+.invoice-doc.no-vat .items-table .col-vat {
+  display: none;
 }
 
 .items-table thead .num {
