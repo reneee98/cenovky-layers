@@ -482,7 +482,7 @@ export async function getInvoicePdfDownloadPayload(
     ),
     footerNoteLine: "",
     footerDocNo: `OF ${invoice.invoiceNumber}`,
-    footerWebsite: normalizeText(supplier.companyWebsite, "www.layers.sk"),
+    footerWebsite: normalizeText(supplier.companyWebsite, ""),
     footerPage: "Strana 1/1",
   };
 

@@ -458,6 +458,10 @@ body {
   color: #868686;
 }
 
+.footer-bottom.no-website {
+  grid-template-columns: 1fr 1fr;
+}
+
 .footer-bottom span:first-child {
   text-align: left;
 }

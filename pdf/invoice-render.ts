@@ -320,6 +320,8 @@ function buildTemplateHtml(snapshot: InvoiceTemplateSnapshot, template: CachedTe
   const vatEnabled = snapshot.vatEnabled;
   const hasLogo = Boolean(snapshot.logoDataUrl && normalizeWhitespace(snapshot.logoDataUrl).length > 0);
   const note = snapshot.note ?? (vatEnabled ? null : "Nie sme platiteľmi DPH.");
+  const footerWebsite =
+    typeof snapshot.footerWebsite === "string" ? normalizeWhitespace(snapshot.footerWebsite) : "";
   const documentClassNames = vatEnabled ? "" : "no-vat";
   const invoiceHeadClassNames = hasLogo ? "invoice-head" : "invoice-head no-logo";
 
@@ -373,7 +375,9 @@ function buildTemplateHtml(snapshot: InvoiceTemplateSnapshot, template: CachedTe
     FOOTER_REGISTRATION_LINE: escapeHtml(ensureNonEmpty(snapshot.footerRegistrationLine)),
     FOOTER_NOTE_LINE: escapeHtml(ensureNonEmpty(snapshot.footerNoteLine)),
     FOOTER_DOC_NO: escapeHtml(ensureNonEmpty(snapshot.footerDocNo)),
-    FOOTER_WEBSITE: escapeHtml(ensureNonEmpty(snapshot.footerWebsite)),
+    FOOTER_WEBSITE: escapeHtml(footerWebsite),
+    FOOTER_WEBSITE_CLASS: footerWebsite ? "" : "is-hidden",
+    FOOTER_BOTTOM_CLASS: footerWebsite ? "" : "no-website",
     FOOTER_PAGE: escapeHtml(ensureNonEmpty(snapshot.footerPage)),
   };
 
