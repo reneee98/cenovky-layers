@@ -48,7 +48,6 @@ test("pay by square: validates IBAN and normalizes equivalent inputs", async (t)
       buildPayBySquarePayload({
         amount: 50,
         currency: "EUR",
-        dueDate: "2026-03-10",
         variableSymbol: "123",
         paymentNote: "Faktura",
         beneficiaryName: "Acme",
@@ -60,7 +59,6 @@ test("pay by square: validates IBAN and normalizes equivalent inputs", async (t)
   const payloadA = buildPayBySquarePayload({
     amount: 50,
     currency: "EUR",
-    dueDate: "2026-03-10",
     variableSymbol: "12-3",
     paymentNote: " Faktura za sluzby ",
     beneficiaryName: "Acme",
@@ -70,7 +68,6 @@ test("pay by square: validates IBAN and normalizes equivalent inputs", async (t)
   const payloadB = buildPayBySquarePayload({
     amount: 50,
     currency: "EUR",
-    dueDate: "2026-03-10",
     variableSymbol: "123",
     paymentNote: "Faktura za sluzby",
     beneficiaryName: "Acme",

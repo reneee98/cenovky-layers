@@ -9,7 +9,6 @@ import { CurrencyCode, encode, PaymentOptions } from "bysquare";
 export type PayBySquareParams = {
   amount: number;
   currency: string;
-  dueDate: string;
   variableSymbol?: string | null;
   paymentNote: string;
   beneficiaryName: string;
@@ -28,18 +27,6 @@ function toDigitsOnly(value: string | null | undefined): string {
 function trimNote(note: string): string {
   const t = note.trim();
   return t.length <= MAX_PAYMENT_NOTE ? t : t.slice(0, MAX_PAYMENT_NOTE);
-}
-
-/**
- * Formát dueDate pre Pay by square: YYYYMMDD.
- */
-function toDueDateYYYYMMDD(dueDate: string): string | undefined {
-  const d = new Date(dueDate);
-  if (Number.isNaN(d.getTime())) return undefined;
-  const y = d.getUTCFullYear();
-  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(d.getUTCDate()).padStart(2, "0");
-  return `${y}${m}${day}`;
 }
 
 /**
@@ -66,7 +53,6 @@ export function buildPayBySquarePayload(params: PayBySquareParams): string {
 
   const variableSymbol = toDigitsOnly(params.variableSymbol);
   const paymentNote = trimNote(params.paymentNote);
-  const dueDate = toDueDateYYYYMMDD(params.dueDate);
   const currencyCode = toCurrencyCode(params.currency);
   const beneficiaryName = params.beneficiaryName.trim().slice(0, 70) || "Beneficiary";
 
@@ -82,7 +68,6 @@ export function buildPayBySquarePayload(params: PayBySquareParams): string {
             type: PaymentOptions.PaymentOrder,
             amount: params.amount > 0 ? params.amount : undefined,
             currencyCode: currencyCode as keyof typeof CurrencyCode,
-            ...(dueDate ? { paymentDueDate: dueDate } : {}),
             ...(variableSymbol ? { variableSymbol } : {}),
             ...(paymentNote ? { paymentNote } : {}),
             beneficiary: { name: beneficiaryName },

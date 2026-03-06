@@ -368,13 +368,9 @@ export async function getInvoicePdfDownloadPayload(
 
     if (ibanForQr.length >= 15) {
       try {
-        const dueDateRaw = invoice.dueDate != null ? new Date(invoice.dueDate as Date | string) : new Date();
-        const dueDateIso =
-          Number.isNaN(dueDateRaw.getTime()) ? new Date().toISOString().slice(0, 10) : dueDateRaw.toISOString().slice(0, 10);
         const payBySquareString = buildPayBySquarePayload({
           amount: amountDue,
           currency: currency.trim().toUpperCase() || "EUR",
-          dueDate: dueDateIso,
           variableSymbol: invoice.variableSymbol ?? undefined,
           paymentNote: "Uhrada faktury c. " + (invoice.invoiceNumber ?? "").trim().slice(0, 130),
           beneficiaryName: beneficiaryForQr,
@@ -804,13 +800,9 @@ export async function getInvoicePdfDownloadPayload(
       const beneficiaryForQr = normalizeText(supplier.companyName, "Beneficiary").trim().slice(0, 70);
       if (ibanForQr.length >= 15) {
         try {
-          const dueDateRaw = invoice.dueDate != null ? new Date(invoice.dueDate as Date | string) : new Date();
-          const dueDateIso =
-            Number.isNaN(dueDateRaw.getTime()) ? new Date().toISOString().slice(0, 10) : dueDateRaw.toISOString().slice(0, 10);
           const payBySquareString = buildPayBySquarePayload({
             amount: amountDue,
             currency: currency.trim().toUpperCase() || "EUR",
-            dueDate: dueDateIso,
             variableSymbol: invoice.variableSymbol ?? undefined,
             paymentNote: "Uhrada faktury c. " + (invoice.invoiceNumber ?? "").trim().slice(0, 130),
             beneficiaryName: beneficiaryForQr,
