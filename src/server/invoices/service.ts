@@ -12,6 +12,7 @@ import {
   toDate,
 } from "@/lib/db";
 import { resolveInvoiceStatus } from "@/lib/invoices/status";
+import { isCompactInvoiceSequence } from "@/server/invoices/numbering";
 import { calculateInvoiceLineTotals, calculateInvoiceTotals } from "@/server/invoices/totals";
 import {
   buildClientSnapshot,
@@ -121,6 +122,14 @@ function prepareInvoicePayload(input: UpsertInvoiceInput): PreparedInvoicePayloa
   if (!invoiceNumber) {
     throw new Error("INVOICE_NUMBER_REQUIRED");
   }
+  if (!isCompactInvoiceSequence(invoiceNumber)) {
+    throw new Error("INVOICE_NUMBER_INVALID_FORMAT");
+  }
+
+  const variableSymbol = normalizeString(input.variableSymbol);
+  if (variableSymbol && !isCompactInvoiceSequence(variableSymbol)) {
+    throw new Error("VARIABLE_SYMBOL_INVALID_FORMAT");
+  }
 
   const paymentMethod = normalizeString(input.paymentMethod);
   if (!paymentMethod) {
@@ -158,7 +167,7 @@ function prepareInvoicePayload(input: UpsertInvoiceInput): PreparedInvoicePayloa
     quoteId: input.quoteId,
     clientId: input.clientId,
     invoiceNumber,
-    variableSymbol: normalizeString(input.variableSymbol),
+    variableSymbol,
     issueDate,
     taxableSupplyDate,
     dueDate,

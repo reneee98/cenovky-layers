@@ -5,12 +5,12 @@ import { buildDefaultVariableSymbol, formatInvoiceNumber } from "../server/invoi
 import { buildEpcQrPayload } from "../server/invoices/payment-qr";
 
 test("invoice numbering: format and variable symbol fallback", () => {
-  assert.equal(formatInvoiceNumber(2026, 7), "2026-007");
-  assert.equal(buildDefaultVariableSymbol("FA 2026/0007"), "20260007");
+  assert.equal(formatInvoiceNumber(2026, 7), "20260007");
+  assert.equal(buildDefaultVariableSymbol("20260007"), "20260007");
 
   const fallback = buildDefaultVariableSymbol("x");
   const currentYear = String(new Date().getUTCFullYear());
-  assert.equal(fallback, `${currentYear}001`);
+  assert.equal(fallback, `${currentYear}0001`);
 });
 
 test("payment QR: builds EPC payload with 12 lines and trimming", () => {

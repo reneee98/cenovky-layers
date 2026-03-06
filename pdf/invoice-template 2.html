@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="sk">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{DOCUMENT_TITLE}}</title>
+    <style>
+{{INLINE_CSS}}
+    </style>
+  </head>
+  <body>
+    <main class="pdf-page invoice-page">
+      <header class="header">
+        <div class="brand-block">
+          <p class="brand-logo-fallback">layers<sup>™</sup></p>
+        </div>
+        <div class="contact-block">
+          {{HEADER_CONTACT_HTML}}
+        </div>
+      </header>
+
+      <section class="title-block">
+        <h1 class="title">{{TITLE}}</h1>
+        <p class="subtitle">{{SUBTITLE}}</p>
+      </section>
+
+      <section class="billing-row">
+        <article class="billing-card billing-card-supplier">
+          <h2 class="billing-title">{{SUPPLIER_CARD_TITLE}}</h2>
+          <div class="billing-lines">
+            {{SUPPLIER_LINES_HTML}}
+          </div>
+        </article>
+
+        <article class="billing-card billing-card-client">
+          <h2 class="billing-title">{{CLIENT_CARD_TITLE}}</h2>
+          <div class="billing-lines">
+            {{CLIENT_LINES_HTML}}
+          </div>
+        </article>
+      </section>
+
+      <section class="invoice-meta">
+        {{META_ROWS_HTML}}
+      </section>
+
+      <section class="items-section">
+        <div class="items-table-shell invoice-items-table-shell">
+          <table class="items-table invoice-items-table">
+            <colgroup>
+              <col class="col-item" />
+              <col class="col-qty" />
+              <col class="col-unit" />
+              <col class="col-price" />
+              <col class="col-disc" />
+              <col class="col-vat" />
+              <col class="col-total" />
+            </colgroup>
+            <thead>
+              <tr>
+                <th>{{ITEM_COL_NAME}}</th>
+                <th class="num">{{ITEM_COL_QTY}}</th>
+                <th class="num">{{ITEM_COL_UNIT}}</th>
+                <th class="num">{{ITEM_COL_PRICE}}</th>
+                <th class="num">{{ITEM_COL_DISCOUNT}}</th>
+                <th class="num">{{ITEM_COL_VAT}}</th>
+                <th class="num">{{ITEM_COL_TOTAL}}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{ITEM_ROWS_HTML}}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="summary-total">
+        <div class="total-bar">
+          <div class="total-left">{{TOTAL_TITLE}}</div>
+          <div class="total-right">
+            <p class="grand-total">{{TOTAL_GRAND}}</p>
+            <p class="total-meta">{{TOTAL_SUBTOTAL_LABEL}}: {{TOTAL_SUBTOTAL}}</p>
+            <p class="total-meta">{{TOTAL_DISCOUNT_LABEL}}: {{TOTAL_DISCOUNT}}</p>
+            <p class="total-meta">{{TOTAL_TAX_BASE_LABEL}}: {{TOTAL_TAX_BASE}}</p>
+            <p class="total-meta">{{TOTAL_VAT_LABEL}}: {{TOTAL_VAT}}</p>
+            <p class="total-meta">{{TOTAL_PAID_LABEL}}: {{TOTAL_PAID}}</p>
+            <p class="total-meta total-meta-strong">{{TOTAL_DUE_LABEL}}: {{TOTAL_DUE}}</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="summary-notes">
+        <section class="invoice-payment {{PAYMENT_SECTION_CLASS}}">
+          <h3 class="notes-title">{{PAYMENT_TITLE}}</h3>
+          <div class="invoice-payment-grid">
+            <div class="invoice-payment-details">
+              {{PAYMENT_LINES_HTML}}
+            </div>
+            <div class="invoice-payment-qr {{PAYMENT_QR_CLASS}}">
+              <img src="{{PAYMENT_QR_DATA_URL}}" alt="PAY by square QR" />
+              <p>PAY by square</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="invoice-note {{LEGAL_NOTE_SECTION_CLASS}}">
+          <h3 class="notes-title">{{LEGAL_NOTE_TITLE}}</h3>
+          {{LEGAL_NOTE_HTML}}
+        </section>
+
+        <section class="invoice-note {{NOTE_SECTION_CLASS}}">
+          <h3 class="notes-title">{{NOTE_TITLE}}</h3>
+          {{NOTE_HTML}}
+        </section>
+
+        <footer class="footer-chip">{{FOOTER_COMPANY_LINE}}</footer>
+      </section>
+    </main>
+  </body>
+</html>

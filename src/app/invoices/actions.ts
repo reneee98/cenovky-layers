@@ -8,6 +8,7 @@ import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { requireUserId } from "@/lib/auth";
 import { isInvoiceStatus } from "@/lib/invoices/status";
 import { isDbKnownRequestError } from "@/lib/db-errors";
+import { isCompactInvoiceSequence } from "@/server/invoices/numbering";
 import {
   addPaymentToInvoice,
   createInvoiceWithItems,
@@ -25,6 +26,7 @@ type InvoiceFormFieldErrors = Partial<
   Record<
     | "client_id"
     | "invoice_number"
+    | "variable_symbol"
     | "issue_date"
     | "taxable_supply_date"
     | "due_date"
@@ -195,6 +197,10 @@ function mapInvoiceErrorToMessage(error: unknown): string {
       return "Faktura musi obsahovat aspon jednu polozku.";
     case "INVOICE_NUMBER_REQUIRED":
       return "Cislo faktury je povinne.";
+    case "INVOICE_NUMBER_INVALID_FORMAT":
+      return "Cislo faktury musi mat format RRRRNNNN (napr. 20260001).";
+    case "VARIABLE_SYMBOL_INVALID_FORMAT":
+      return "Variabilny symbol musi mat format RRRRNNNN (napr. 20260001).";
     case "QUOTE_REMAINING_EXCEEDED":
       return "Ciastka faktury presahuje zostavajucu sumu na fakturaciu ponuky.";
     case "PAYMENT_EXCEEDS_TOTAL":
@@ -253,6 +259,12 @@ export async function saveInvoiceAction(
   const clientId = readRequiredString(formData, "client_id", errors);
   const invoiceNumber = readRequiredString(formData, "invoice_number", errors);
   const variableSymbol = readOptionalString(formData, "variable_symbol");
+  if (invoiceNumber && !isCompactInvoiceSequence(invoiceNumber)) {
+    errors.invoice_number = "Pouzite format RRRRNNNN (napr. 20260001).";
+  }
+  if (variableSymbol && !isCompactInvoiceSequence(variableSymbol)) {
+    errors.variable_symbol = "Pouzite format RRRRNNNN (napr. 20260001).";
+  }
 
   const issueDate = parseRequiredDate(formData, "issue_date", errors);
   const taxableSupplyDate = parseRequiredDate(formData, "taxable_supply_date", errors);

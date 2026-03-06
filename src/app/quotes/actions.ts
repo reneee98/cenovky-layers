@@ -21,7 +21,11 @@ import { reserveNextQuoteNumber } from "@/server/quotes/numbering";
 import { createInvoiceWithItems } from "@/server/invoices/service";
 import type { InvoiceItemInput } from "@/server/invoices/service";
 import { getQuoteInvoicingMetrics } from "@/server/invoices/quote-metrics";
-import { reserveNextInvoiceNumber, buildDefaultVariableSymbol } from "@/server/invoices/numbering";
+import {
+  reserveNextInvoiceNumber,
+  buildDefaultVariableSymbol,
+  isCompactInvoiceSequence,
+} from "@/server/invoices/numbering";
 import { roundMoney } from "@/lib/quotes/invoicing";
 
 type QuoteStatus = QuoteStatusEnum;
@@ -279,6 +283,10 @@ function mapInvoiceCreateErrorToMessage(error: unknown): string {
       return "Mena faktury musi byt rovnaka ako mena ponuky.";
     case "INVALID_DATE":
       return "Niektory z datumov je neplatny.";
+    case "INVOICE_NUMBER_INVALID_FORMAT":
+      return "Cislo faktury musi mat format RRRRNNNN (napr. 20260001).";
+    case "VARIABLE_SYMBOL_INVALID_FORMAT":
+      return "Variabilny symbol musi mat format RRRRNNNN (napr. 20260001).";
     case "PAYMENT_METHOD_REQUIRED":
       return "Sposob uhrady je povinny.";
     default:
@@ -324,6 +332,12 @@ export async function createInvoiceFromQuoteAction(formData: FormData): Promise<
   const note = readOptionalFormString(formData, "note");
   const invoiceNumberInput = readOptionalFormString(formData, "invoice_number");
   const variableSymbol = readOptionalFormString(formData, "variable_symbol");
+  if (invoiceNumberInput && !isCompactInvoiceSequence(invoiceNumberInput)) {
+    redirect(buildQuoteBuilderUrl(quoteId, { error: "Cislo faktury musi mat format RRRRNNNN (napr. 20260001)." }));
+  }
+  if (variableSymbol && !isCompactInvoiceSequence(variableSymbol)) {
+    redirect(buildQuoteBuilderUrl(quoteId, { error: "Variabilny symbol musi mat format RRRRNNNN (napr. 20260001)." }));
+  }
 
   let items: InvoiceItemInput[];
 
@@ -372,7 +386,13 @@ export async function createInvoiceFromQuoteAction(formData: FormData): Promise<
   }
 
   const invoiceNumber = invoiceNumberInput ?? await reserveNextInvoiceNumber(userId, issueDate);
+  if (!isCompactInvoiceSequence(invoiceNumber)) {
+    redirect(buildQuoteBuilderUrl(quoteId, { error: "Cislo faktury musi mat format RRRRNNNN (napr. 20260001)." }));
+  }
   const variableSymbolFinal = variableSymbol ?? buildDefaultVariableSymbol(invoiceNumber);
+  if (!isCompactInvoiceSequence(variableSymbolFinal)) {
+    redirect(buildQuoteBuilderUrl(quoteId, { error: "Variabilny symbol musi mat format RRRRNNNN (napr. 20260001)." }));
+  }
 
   try {
     const invoice = await createInvoiceWithItems(userId, {

@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="sk">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{DOCUMENT_TITLE}}</title>
+    <style>
+{{INLINE_CSS}}
+    </style>
+  </head>
+  <body>
+    <main class="invoice-doc">
+      <header class="invoice-head">
+        <div class="brand">{{LOGO_HTML}}</div>
+        <div class="invoice-title-wrap">
+          <span class="invoice-title-icon">🖨</span>
+          <h1 class="invoice-title">{{INVOICE_TITLE}}</h1>
+        </div>
+      </header>
+
+      <section class="parties">
+        <article class="party">
+          <h2>{{SUPPLIER_HEADING}}</h2>
+          {{SUPPLIER_LINES_HTML}}
+        </article>
+        <article class="party">
+          <h2>{{CLIENT_HEADING}}</h2>
+          {{CLIENT_LINES_HTML}}
+          <p class="party-tax-meta">{{CLIENT_TAX_META}}</p>
+        </article>
+      </section>
+
+      <section class="invoice-meta-grid">
+        <div class="invoice-dates">
+          {{META_ROWS_HTML}}
+        </div>
+        <aside class="payment-card {{PAYMENT_SECTION_CLASS}}">
+          <div class="payment-main">
+            {{PAYMENT_LINES_HTML}}
+          </div>
+          <div class="payment-qr {{PAYMENT_QR_CLASS}}">
+            <img src="{{PAYMENT_QR_DATA_URL}}" alt="PAY by square QR" />
+            <p>PAY by square</p>
+          </div>
+        </aside>
+      </section>
+
+      <section class="items">
+        <table class="items-table">
+          <thead>
+            <tr>
+              <th>{{ITEM_COL_NO}}</th>
+              <th>{{ITEM_COL_NAME}}</th>
+              <th class="num">{{ITEM_COL_QTY}}</th>
+              <th class="num">{{ITEM_COL_PRICE}}</th>
+              <th class="num">{{ITEM_COL_VAT}}</th>
+              <th class="num">{{ITEM_COL_TOTAL}}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {{ITEM_ROWS_HTML}}
+          </tbody>
+        </table>
+      </section>
+
+      <section class="totals-wrap">
+        <table class="vat-summary">
+          <thead>
+            <tr>
+              <th>{{VAT_SUMMARY_RATE}}</th>
+              <th class="num">{{VAT_SUMMARY_BASE}}</th>
+              <th class="num">{{VAT_SUMMARY_VAT}}</th>
+              <th class="num">{{VAT_SUMMARY_TOTAL}}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {{VAT_SUMMARY_ROWS_HTML}}
+          </tbody>
+          <tfoot>
+            <tr>
+              <td>{{VAT_SUMMARY_SUM}}</td>
+              <td class="num">{{TOTAL_TAX_BASE}}</td>
+              <td class="num">{{TOTAL_VAT}}</td>
+              <td class="num">{{TOTAL_GRAND}}</td>
+            </tr>
+          </tfoot>
+        </table>
+
+        <div class="grand-total">
+          <span>{{TOTAL_LABEL}}</span>
+          <strong>{{TOTAL_GRAND_WITH_CURRENCY}}</strong>
+        </div>
+      </section>
+
+      <section class="notes {{NOTES_SECTION_CLASS}}">
+        <h3>{{LEGAL_NOTE_TITLE}}</h3>
+        {{LEGAL_NOTE_HTML}}
+      </section>
+
+      <section class="notes {{NOTE_SECTION_CLASS}}">
+        <h3>{{NOTE_TITLE}}</h3>
+        {{NOTE_HTML}}
+      </section>
+
+      <section class="signature">
+        <div class="signature-line">______________________</div>
+        <p>Pečiatka a podpis</p>
+      </section>
+
+      <footer class="invoice-footer">
+        <p>{{FOOTER_REGISTRATION_LINE}}</p>
+        <p>{{FOOTER_NOTE_LINE}}</p>
+        <div class="footer-bottom">
+          <span>{{FOOTER_DOC_NO}}</span>
+          <span>{{FOOTER_WEBSITE}}</span>
+          <span>{{FOOTER_PAGE}}</span>
+        </div>
+      </footer>
+    </main>
+  </body>
+</html>

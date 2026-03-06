@@ -1,12 +1,29 @@
 import { dbQuery } from "@/lib/db";
 
+const COMPACT_SEQUENCE_REGEX = /^(\d{4})(\d{4})$/;
+const LEGACY_SEQUENCE_REGEX = /(?:^|[^0-9])(\d{4})-(\d{1,4})$/;
+
+export function isCompactInvoiceSequence(value: string): boolean {
+  return COMPACT_SEQUENCE_REGEX.test(value.trim());
+}
+
 export function formatInvoiceNumber(year: number, counter: number): string {
-  return `${year}-${String(counter).padStart(3, "0")}`;
+  if (!Number.isInteger(year) || year < 1000 || year > 9999) {
+    throw new Error("INVOICE_YEAR_OUT_OF_RANGE");
+  }
+
+  if (!Number.isInteger(counter) || counter < 1 || counter > 9999) {
+    throw new Error("INVOICE_COUNTER_OUT_OF_RANGE");
+  }
+
+  return `${year}${String(counter).padStart(4, "0")}`;
 }
 
 function parseYearCounter(number: string): { year: number; counter: number } | null {
   const normalized = number.trim();
-  const match = normalized.match(/(?:^|[^0-9])(\d{4})-(\d{1,})$/);
+  const compactMatch = normalized.match(COMPACT_SEQUENCE_REGEX);
+  const legacyMatch = normalized.match(LEGACY_SEQUENCE_REGEX);
+  const match = compactMatch ?? legacyMatch;
 
   if (!match) {
     return null;
@@ -45,14 +62,19 @@ export async function reserveNextInvoiceNumber(
     maxCounter = Math.max(maxCounter, parsed.counter);
   }
 
-  return formatInvoiceNumber(targetYear, maxCounter + 1);
+  const nextCounter = maxCounter + 1;
+  if (nextCounter > 9999) {
+    throw new Error("INVOICE_COUNTER_OVERFLOW");
+  }
+
+  return formatInvoiceNumber(targetYear, nextCounter);
 }
 
 export function buildDefaultVariableSymbol(invoiceNumber: string): string {
-  const digitsOnly = invoiceNumber.replace(/\D+/g, "");
-  if (digitsOnly.length >= 4) {
-    return digitsOnly;
+  const parsed = parseYearCounter(invoiceNumber);
+  if (parsed) {
+    return formatInvoiceNumber(parsed.year, parsed.counter);
   }
 
-  return `${new Date().getUTCFullYear()}001`;
+  return `${new Date().getUTCFullYear()}0001`;
 }

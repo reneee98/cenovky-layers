@@ -38,6 +38,7 @@ yarn-error.log*
 /.cursor/
 /.tmp-light/
 /.tmp-oxide/
+/.tooling/
 /.tooling/node22/
 /public/uploads/
 /tmp-*.pdf

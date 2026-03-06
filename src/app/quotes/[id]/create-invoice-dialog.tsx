@@ -240,13 +240,16 @@ export function CreateInvoiceFromQuoteDialog({
               id="invoice_number"
               name="invoice_number"
               type="text"
+              inputMode="numeric"
+              pattern="[0-9]{8}"
+              title="Format RRRRNNNN (napr. 20260001)"
               value={invoiceNumber}
               onChange={(event) => setInvoiceNumber(event.target.value)}
               required
               aria-describedby="invoice_number_hint"
             />
             <p id="invoice_number_hint" className="text-xs text-slate-500">
-              Predvyplnené podľa posledného čísla, môžete upraviť ručne.
+              Predvyplnene podla posledneho cisla, format RRRRNNNN (napr. 20260001).
             </p>
           </div>
 
@@ -256,6 +259,9 @@ export function CreateInvoiceFromQuoteDialog({
               id="variable_symbol"
               name="variable_symbol"
               type="text"
+              inputMode="numeric"
+              pattern="[0-9]{8}"
+              title="Format RRRRNNNN (napr. 20260001)"
               defaultValue={suggestedVariableSymbol}
               placeholder={suggestedVariableSymbol}
             />

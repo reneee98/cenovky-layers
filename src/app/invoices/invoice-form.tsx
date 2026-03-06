@@ -325,6 +325,9 @@ export function InvoiceForm({
             <input
               name="invoice_number"
               required
+              inputMode="numeric"
+              pattern="[0-9]{8}"
+              title="Format RRRRNNNN (napr. 20260001)"
               defaultValue={initialValues.invoiceNumber}
               className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
             />
@@ -335,9 +338,13 @@ export function InvoiceForm({
             Variabilny symbol
             <input
               name="variable_symbol"
+              inputMode="numeric"
+              pattern="[0-9]{8}"
+              title="Format RRRRNNNN (napr. 20260001)"
               defaultValue={initialValues.variableSymbol}
               className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
             />
+            <FieldError message={state.fieldErrors?.variable_symbol} />
           </label>
 
           <label className="text-sm text-slate-700">
