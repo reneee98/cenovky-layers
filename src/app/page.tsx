@@ -10,25 +10,52 @@ import {
   listQuotesWithDetails,
 } from "@/server/repositories";
 import { calculateQuoteTotals } from "@/server/quotes/totals";
+import type { QuoteStatus } from "@/types/domain";
 
-function MetricCard({
-  label,
-  value,
-  note,
-}: {
+type MetricCardProps = {
   label: string;
   value: string;
   note?: string;
-}) {
+  accent?: "indigo" | "emerald" | "amber" | "slate";
+};
+
+const ACCENT_STYLES: Record<NonNullable<MetricCardProps["accent"]>, string> = {
+  indigo: "border-l-indigo-500 group-hover:text-indigo-700",
+  emerald: "border-l-emerald-500 group-hover:text-emerald-700",
+  amber: "border-l-amber-500 group-hover:text-amber-700",
+  slate: "border-l-slate-400 group-hover:text-slate-700",
+};
+
+function MetricCard({ label, value, note, accent = "slate" }: MetricCardProps) {
   return (
-    <section className="group relative overflow-hidden rounded-2xl border border-slate-100 bg-white p-6 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.02)] transition-all duration-300 hover:border-slate-200 hover:shadow-lg hover:shadow-slate-200/50">
-      <p className="text-xs font-bold uppercase tracking-widest text-slate-400">{label}</p>
-      <p className="mt-3 text-4xl font-bold leading-none tracking-tight text-slate-900 transition-colors duration-300 group-hover:text-blue-900">
+    <section
+      className={`group relative overflow-hidden rounded-2xl border border-slate-200 border-l-4 bg-white p-6 shadow-sm transition-all duration-300 hover:shadow-md hover:border-slate-300 ${ACCENT_STYLES[accent].split(" ")[0]}`}
+    >
+      <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">{label}</p>
+      <p className={`mt-3 text-4xl font-bold leading-none tracking-tight text-slate-900 transition-colors duration-200 ${ACCENT_STYLES[accent].split(" ")[1]}`}>
         {value}
       </p>
-      {note ? <p className="mt-2 text-sm font-medium text-slate-500">{note}</p> : null}
-      <div className="pointer-events-none absolute -bottom-12 -right-12 h-32 w-32 rounded-full bg-gradient-to-br from-blue-50/60 to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
+      {note ? <p className="mt-2 text-xs font-medium text-slate-400">{note}</p> : null}
     </section>
+  );
+}
+
+function getStatusBadge(status: QuoteStatus) {
+  const styles: Record<QuoteStatus, string> = {
+    draft: "bg-slate-100 text-slate-600 ring-slate-500/10",
+    sent: "bg-amber-50 text-amber-700 ring-amber-500/15",
+    accepted: "bg-emerald-50 text-emerald-700 ring-emerald-500/15",
+    rejected: "bg-red-50 text-red-700 ring-red-500/15",
+    invoiced: "bg-indigo-50 text-indigo-700 ring-indigo-500/15",
+  };
+
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${styles[status]}`}
+    >
+      <span className="h-1.5 w-1.5 rounded-full bg-current opacity-70" />
+      {formatQuoteStatus(status)}
+    </span>
   );
 }
 
@@ -57,60 +84,66 @@ export default async function Home({ searchParams }: HomePageProps) {
   return (
     <AppShell
       active="dashboard"
-      title="Prehlad"
-      description="Rychly stav pipeline ponuk a hlavnych katalogov."
+      title="Prehľad"
+      description="Rýchly stav pipeline ponúk a hlavných katalógov."
       headerActions={
         <Link
           href="/quotes/new"
-          className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition-all hover:bg-blue-700 hover:shadow-blue-600/30 sm:w-auto"
+          className="ui-btn ui-btn--primary ui-btn--md w-full sm:w-auto"
         >
-          Nova ponuka
+          Nová ponuka
         </Link>
       }
     >
-      {notice ? <p className="mb-4 text-sm text-emerald-700">{notice}</p> : null}
-      <div className="mb-10 grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
+      {notice ? <div className="ui-notice mb-6">{notice}</div> : null}
+
+      <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard
           label="Ponuky celkom"
           value={String(quotes.length)}
-          note={`${draftQuotes} draft / ${sentQuotes} sent`}
+          note={`${draftQuotes} draft · ${sentQuotes} odoslané`}
+          accent="indigo"
         />
         <MetricCard
-          label="Akceptovane"
+          label="Akceptované"
           value={String(acceptedQuotes)}
-          note="Manualne nastavene stavy"
+          note="Manuálne nastavené stavy"
+          accent="emerald"
         />
         <MetricCard
           label="Klienti"
           value={String(clients.length)}
-          note="Aktivne zaznamy v adresari"
+          note="Aktívne záznamy v adresári"
+          accent="amber"
         />
         <MetricCard
-          label="Katalog poloziek"
+          label="Katalóg položiek"
           value={String(catalogItems.length)}
-          note="Predvolene ceny a jednotky"
+          note="Predvolené ceny a jednotky"
+          accent="slate"
         />
       </div>
 
-      <section className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-[0_4px_20px_-8px_rgba(0,0,0,0.03)]">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-50 p-6 pb-4">
+      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-6 py-4">
           <div>
-            <h2 className="text-lg font-bold tracking-tight text-slate-900">Posledne ponuky</h2>
-            <p className="mt-0.5 text-sm text-slate-500">Zoznam najnovsich cenovych ponuk.</p>
+            <h2 className="text-base font-bold tracking-tight text-slate-900">Posledné ponuky</h2>
+            <p className="mt-0.5 text-sm text-slate-500">Zoznam najnovších cenových ponúk.</p>
           </div>
           <Link
             href="/quotes"
-            className="inline-flex items-center rounded-lg bg-blue-50 px-3 py-1.5 text-sm font-semibold text-blue-600 transition-all hover:bg-blue-100 hover:text-blue-700"
+            className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 hover:border-slate-300"
           >
-            Otvorit zoznam
+            Otvoriť zoznam →
           </Link>
         </div>
 
         {recentQuotes.length === 0 ? (
-          <p className="p-6 text-sm text-slate-500">Zatial nemas ziadne ponuky.</p>
+          <div className="p-6 text-sm text-slate-500">Zatiaľ nemáš žiadne ponuky.</div>
         ) : (
           <>
-            <div className="space-y-3 p-4 md:hidden">
+            {/* Mobile cards */}
+            <div className="divide-y divide-slate-100 md:hidden">
               {recentQuotes.map((quote) => {
                 const totals = calculateQuoteTotals({
                   items: quote.items,
@@ -121,58 +154,55 @@ export default async function Home({ searchParams }: HomePageProps) {
                 });
 
                 return (
-                  <article
+                  <Link
                     key={quote.id}
-                    className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm"
+                    href={`/quotes/${quote.id}`}
+                    className="block px-4 py-3.5 transition-colors hover:bg-slate-50"
                   >
-                    <p className="text-sm font-semibold text-slate-900">#{quote.number}</p>
-                    <p className="mt-1 text-sm text-slate-700">{quote.title}</p>
-                    <dl className="mt-2 space-y-1 text-xs text-slate-600">
-                      <div className="flex items-center justify-between gap-3">
-                        <dt>Klient</dt>
-                        <dd className="text-right text-slate-900">{quote.client.name}</dd>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="font-mono text-xs font-semibold text-slate-400">#{quote.number}</p>
+                        <p className="mt-0.5 text-sm font-semibold text-slate-900 truncate">{quote.title}</p>
+                        <p className="mt-0.5 text-xs text-slate-500">{quote.client.name}</p>
                       </div>
-                      <div className="flex items-center justify-between gap-3">
-                        <dt>Stav</dt>
-                        <dd className="text-right text-slate-900">{formatQuoteStatus(quote.status)}</dd>
-                      </div>
-                      <div className="flex items-center justify-between gap-3">
-                        <dt>Spolu bez DPH</dt>
-                        <dd className="text-right text-slate-900">
+                      <div className="shrink-0 text-right">
+                        {getStatusBadge(quote.status)}
+                        <p className="mt-1.5 text-sm font-bold tabular-nums text-slate-900">
                           {formatCurrency(totals.taxableBase, quote.currency)}
-                        </dd>
+                        </p>
                       </div>
-                    </dl>
-                  </article>
+                    </div>
+                  </Link>
                 );
               })}
             </div>
 
+            {/* Desktop table */}
             <div className="hidden overflow-x-auto md:block">
               <table className="w-full border-collapse text-left text-sm">
                 <thead>
-                  <tr className="border-b border-slate-100 bg-slate-50/50">
-                    <th className="w-32 px-6 py-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
-                      Cislo
+                  <tr className="border-b border-slate-100 bg-slate-50/60">
+                    <th className="w-32 px-6 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                      Číslo
                     </th>
-                    <th className="px-6 py-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
-                      Nazov
+                    <th className="px-6 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                      Názov
                     </th>
-                    <th className="px-6 py-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
+                    <th className="px-6 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
                       Klient
                     </th>
-                    <th className="px-6 py-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
+                    <th className="px-6 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
                       Stav
                     </th>
-                    <th className="px-6 py-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
-                      Vytvorena
+                    <th className="px-6 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                      Vytvorená
                     </th>
-                    <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-400">
+                    <th className="px-6 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-slate-400">
                       Spolu bez DPH
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-50">
+                <tbody className="divide-y divide-slate-100">
                   {recentQuotes.map((quote) => {
                     const totals = calculateQuoteTotals({
                       items: quote.items,
@@ -185,23 +215,26 @@ export default async function Home({ searchParams }: HomePageProps) {
                     return (
                       <tr
                         key={quote.id}
-                        className="group transition-colors hover:bg-slate-50/80"
+                        className="group cursor-pointer transition-colors hover:bg-slate-50/80"
+                        onClick={undefined}
                       >
-                        <td className="px-6 py-4 font-mono font-medium text-slate-500 transition-colors group-hover:text-blue-600">
+                        <td className="px-6 py-4 font-mono text-xs font-semibold text-slate-400 group-hover:text-indigo-600">
                           #{quote.number}
                         </td>
-                        <td className="px-6 py-4 font-semibold text-slate-900">{quote.title}</td>
-                        <td className="px-6 py-4 text-slate-600">{quote.client.name}</td>
                         <td className="px-6 py-4">
-                          <span className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700 ring-1 ring-blue-700/10">
-                            <span className="mr-1.5 h-1.5 w-1.5 rounded-full bg-current opacity-60" />
-                            {formatQuoteStatus(quote.status)}
-                          </span>
+                          <Link
+                            href={`/quotes/${quote.id}`}
+                            className="font-semibold text-slate-900 hover:text-indigo-600 transition-colors"
+                          >
+                            {quote.title}
+                          </Link>
                         </td>
-                        <td className="px-6 py-4 tabular-nums text-slate-500">
+                        <td className="px-6 py-4 text-slate-500">{quote.client.name}</td>
+                        <td className="px-6 py-4">{getStatusBadge(quote.status)}</td>
+                        <td className="px-6 py-4 tabular-nums text-slate-400">
                           {formatDate(quote.createdAt)}
                         </td>
-                        <td className="px-6 py-4 text-right font-bold tracking-tight text-slate-900 tabular-nums">
+                        <td className="px-6 py-4 text-right font-bold tabular-nums tracking-tight text-slate-900">
                           {formatCurrency(totals.taxableBase, quote.currency)}
                         </td>
                       </tr>
@@ -209,7 +242,6 @@ export default async function Home({ searchParams }: HomePageProps) {
                   })}
                 </tbody>
               </table>
-              <div className="h-12 bg-gradient-to-b from-transparent to-slate-50/30" />
             </div>
           </>
         )}

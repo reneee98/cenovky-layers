@@ -81,8 +81,8 @@ export default async function ClientsPage({ searchParams }: ClientsPageProps) {
           </div>
         </form>
 
-        {params.notice ? <p className="mb-4 text-sm text-emerald-700">{params.notice}</p> : null}
-        {params.error ? <p className="mb-4 text-sm text-red-700">{params.error}</p> : null}
+        {params.notice ? <div className="ui-notice mb-4">{params.notice}</div> : null}
+        {params.error ? <div className="ui-notice ui-notice--error mb-4">{params.error}</div> : null}
 
         {clients.length === 0 ? (
           <ListEmptyState
@@ -104,32 +104,37 @@ export default async function ClientsPage({ searchParams }: ClientsPageProps) {
           <>
             <div className="space-y-3 md:hidden">
               {clients.map((client) => (
-                <article key={client.id} className="rounded-md border border-slate-200 p-3">
-                  <p className="text-sm font-semibold text-slate-900">{client.name}</p>
-                  <dl className="mt-2 space-y-1 text-xs text-slate-600">
-                    <div className="flex items-center justify-between gap-3">
-                      <dt>Kontakt</dt>
-                      <dd className="text-right text-slate-800">{client.contactName}</dd>
+                <article key={client.id} className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+                  {/* Clickable header */}
+                  <Link
+                    href={`/clients/${client.id}`}
+                    className="block border-b border-slate-100 px-4 py-3 transition-colors hover:bg-slate-50/70"
+                  >
+                    <p className="text-sm font-semibold text-slate-900">{client.name}</p>
+                    {client.contactName && (
+                      <p className="mt-0.5 text-xs text-slate-500">{client.contactName}</p>
+                    )}
+                  </Link>
+                  <dl className="grid grid-cols-2 gap-x-4 gap-y-2 px-4 py-3 text-xs">
+                    <div className="col-span-2">
+                      <dt className="text-slate-400">Email</dt>
+                      <dd className="mt-0.5 break-all font-medium text-slate-700">{client.contactEmail ?? "—"}</dd>
                     </div>
-                    <div className="flex items-center justify-between gap-3">
-                      <dt>Email</dt>
-                      <dd className="break-all text-right text-slate-800">{client.contactEmail}</dd>
-                    </div>
-                    <div className="flex items-center justify-between gap-3">
-                      <dt>ICO</dt>
-                      <dd className="text-right text-slate-800">{client.ico ?? "-"}</dd>
+                    <div>
+                      <dt className="text-slate-400">IČO</dt>
+                      <dd className="mt-0.5 font-medium text-slate-700">{client.ico ?? "—"}</dd>
                     </div>
                   </dl>
-                  <div className="mt-3 flex gap-2">
+                  <div className="flex items-center gap-2 border-t border-slate-100 px-4 py-3">
                     <Link
                       href={`/clients/${client.id}`}
-                      className="inline-flex flex-1 items-center justify-center rounded-md border border-slate-300 px-3 py-2 text-xs font-medium text-slate-700 transition hover:bg-slate-100"
+                      className="ui-btn ui-btn--secondary ui-btn--sm flex-1"
                     >
-                      Otvorit
+                      Otvoriť
                     </Link>
-                    <form action={deleteClientAction} className="flex-1">
+                    <form action={deleteClientAction}>
                       <input type="hidden" name="client_id" value={client.id} />
-                      <DeleteClientButton clientName={client.name} />
+                      <DeleteClientButton clientName={client.name} iconOnly />
                     </form>
                   </div>
                 </article>
@@ -138,26 +143,33 @@ export default async function ClientsPage({ searchParams }: ClientsPageProps) {
 
             <div className="hidden md:block">
               <div className="ui-table-wrap">
-                <table className="ui-table min-w-[900px]">
+                <table className="ui-table">
                   <thead>
                     <tr>
-                      <th className="ui-table-cell--text">Nazov</th>
-                      <th className="ui-table-cell--text">Kontaktna osoba</th>
-                      <th className="ui-table-cell--text">Kontaktny email</th>
-                      <th className="ui-table-cell--text">ICO</th>
-                      <th className="ui-table-cell--number">Akcie</th>
+                      <th className="ui-table-cell--text">Názov</th>
+                      <th className="ui-table-cell--text">Kontaktná osoba</th>
+                      <th className="ui-table-cell--text">Kontaktný email</th>
+                      <th className="ui-table-cell--text">IČO</th>
+                      <th className="ui-table-cell--number w-24">Akcie</th>
                     </tr>
                   </thead>
                   <tbody>
                     {clients.map((client) => (
                       <tr key={client.id} className="ui-table-row">
-                        <td className="ui-table-cell--text ui-table-cell--strong">{client.name}</td>
-                        <td className="ui-table-cell--text">{client.contactName}</td>
-                        <td className="ui-table-cell--text">{client.contactEmail}</td>
-                        <td className="ui-table-cell--text">{client.ico ?? "-"}</td>
+                        <td className="ui-table-cell--text">
+                          <Link
+                            href={`/clients/${client.id}`}
+                            className="font-semibold text-slate-900 transition-colors hover:text-indigo-600"
+                          >
+                            {client.name}
+                          </Link>
+                        </td>
+                        <td className="ui-table-cell--text">{client.contactName ?? "—"}</td>
+                        <td className="ui-table-cell--text">{client.contactEmail ?? "—"}</td>
+                        <td className="ui-table-cell--text">{client.ico ?? "—"}</td>
                         <td className="ui-table-cell--number">
                           <div className="ui-table-actions">
-                            <IconActionLink href={`/clients/${client.id}`} label="Otvorit klienta">
+                            <IconActionLink href={`/clients/${client.id}`} label="Otvoriť klienta">
                               <OpenIcon />
                             </IconActionLink>
                             <form action={deleteClientAction}>

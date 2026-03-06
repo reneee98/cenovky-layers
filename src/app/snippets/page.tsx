@@ -91,8 +91,8 @@ export default async function SnippetsPage({ searchParams }: SnippetsPageProps) 
           </div>
         </form>
 
-        {params.notice ? <p className="mb-4 text-sm text-emerald-700">{params.notice}</p> : null}
-        {params.error ? <p className="mb-4 text-sm text-red-700">{params.error}</p> : null}
+        {params.notice ? <div className="ui-notice mb-4">{params.notice}</div> : null}
+        {params.error ? <div className="ui-notice ui-notice--error mb-4">{params.error}</div> : null}
 
         {filteredSnippets.length === 0 ? (
           <ListEmptyState

@@ -2,11 +2,11 @@ import type { QuoteStatus as QuoteStatusEnum } from "@/types/domain";
 import Link from "next/link";
 
 import {
-  changeQuoteStatusAction,
   deleteQuoteAction,
   duplicateQuoteAction,
 } from "@/app/quotes/actions";
 import { DeleteQuoteButton } from "@/app/quotes/delete-quote-button";
+import { QuoteStatusSelect } from "@/app/quotes/quote-status-select";
 import { AppShell } from "@/components/app-shell";
 import { requireUserId } from "@/lib/auth";
 import {
@@ -22,7 +22,6 @@ import {
   OpenIcon,
   SearchIcon,
   Select,
-  StatusIcon,
 } from "@/components/ui";
 import { formatCurrency, formatDate } from "@/lib/format";
 import {
@@ -41,42 +40,24 @@ import { listQuotesWithInvoicingMetrics } from "@/server/invoices/quote-metrics"
 type QuoteStatus = QuoteStatusEnum;
 
 function parseDateStart(value?: string): Date | undefined {
-  if (!value) {
-    return undefined;
-  }
-
+  if (!value) return undefined;
   const date = new Date(`${value}T00:00:00`);
-
   return Number.isNaN(date.getTime()) ? undefined : date;
 }
 
 function parseDateEnd(value?: string): Date | undefined {
-  if (!value) {
-    return undefined;
-  }
-
+  if (!value) return undefined;
   const date = new Date(`${value}T23:59:59.999`);
-
   return Number.isNaN(date.getTime()) ? undefined : date;
 }
 
-function getStatusTone(status: QuoteStatus): "neutral" | "warning" | "success" | "danger" | "accent" {
-  if (status === "sent") {
-    return "warning";
-  }
-
-  if (status === "accepted") {
-    return "success";
-  }
-
-  if (status === "rejected") {
-    return "danger";
-  }
-
-  if (status === "invoiced") {
-    return "accent";
-  }
-
+function getStatusTone(
+  status: QuoteStatus,
+): "neutral" | "warning" | "success" | "danger" | "accent" {
+  if (status === "sent") return "warning";
+  if (status === "accepted") return "success";
+  if (status === "rejected") return "danger";
+  if (status === "invoiced") return "accent";
   return "neutral";
 }
 
@@ -103,40 +84,30 @@ export default async function QuotesPage({ searchParams }: QuotesPageProps) {
   const dateFrom = parseDateStart(params.date_from);
   const dateTo = parseDateEnd(params.date_to);
   const search = params.search?.trim() || undefined;
-  const hasActiveFilters = Boolean(
-    status || clientId || currency || dateFrom || dateTo || search,
-  );
+  const hasActiveFilters = Boolean(status || clientId || currency || dateFrom || dateTo || search);
 
   const [quotes, clients, currencies, invoicingMetrics] = await Promise.all([
-    listQuotesWithDetails(userId, {
-      status,
-      clientId,
-      currency,
-      dateFrom,
-      dateTo,
-      search,
-    }),
+    listQuotesWithDetails(userId, { status, clientId, currency, dateFrom, dateTo, search }),
     listClients(userId),
     listQuoteCurrencies(userId),
     listQuotesWithInvoicingMetrics(userId),
   ]);
 
-  const metricsByQuoteId = new Map(
-    invoicingMetrics.map((metric) => [metric.quoteId, metric]),
-  );
+  const metricsByQuoteId = new Map(invoicingMetrics.map((m) => [m.quoteId, m]));
 
   return (
     <AppShell
       active="quotes"
       title="Ponuky"
-      description="Sleduj stav ponuk a exportuj aktualne PDF."
+      description="Sleduj stav ponúk a exportuj aktuálne PDF."
       headerActions={
         <Link href="/quotes/new" className="btn-primary w-full sm:w-auto">
-          Nova ponuka
+          Nová ponuka
         </Link>
       }
     >
       <section className="ui-page-section">
+        {/* Toolbar */}
         <form method="get" className="ui-table-toolbar">
           <label className="ui-table-toolbar__search">
             <SearchIcon className="ui-table-toolbar__search-icon" />
@@ -144,66 +115,79 @@ export default async function QuotesPage({ searchParams }: QuotesPageProps) {
               name="search"
               type="search"
               defaultValue={params.search ?? ""}
-              placeholder="Hladat cislo / nazov / klienta"
-              aria-label="Hladat ponuky"
+              placeholder="Hľadať číslo / názov / klienta"
+              aria-label="Hľadať ponuky"
             />
           </label>
-
           <div className="ui-table-toolbar__filters">
             <Select name="status" defaultValue={params.status ?? ""} aria-label="Filter stavu">
-              <option value="">Vsetky stavy</option>
-              {QUOTE_STATUS_OPTIONS.map((statusOption) => (
-                <option key={statusOption} value={statusOption}>
-                  {formatQuoteStatus(statusOption)}
+              <option value="">Všetky stavy</option>
+              {QUOTE_STATUS_OPTIONS.map((s) => (
+                <option key={s} value={s}>
+                  {formatQuoteStatus(s)}
                 </option>
               ))}
             </Select>
-
-            <Select name="client_id" defaultValue={params.client_id ?? ""} aria-label="Filter klienta">
-              <option value="">Vsetci klienti</option>
-              {clients.map((client) => (
-                <option key={client.id} value={client.id}>
-                  {client.name}
+            <Select
+              name="client_id"
+              defaultValue={params.client_id ?? ""}
+              aria-label="Filter klienta"
+            >
+              <option value="">Všetci klienti</option>
+              {clients.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
                 </option>
               ))}
             </Select>
-
-            <Select name="currency" defaultValue={params.currency ?? ""} aria-label="Filter meny">
-              <option value="">Vsetky meny</option>
-              {currencies.map((currencyOption) => (
-                <option key={currencyOption} value={currencyOption}>
-                  {currencyOption}
+            <Select
+              name="currency"
+              defaultValue={params.currency ?? ""}
+              aria-label="Filter meny"
+            >
+              <option value="">Všetky meny</option>
+              {currencies.map((cur) => (
+                <option key={cur} value={cur}>
+                  {cur}
                 </option>
               ))}
             </Select>
-
             <div className="grid min-w-[220px] grid-cols-2 gap-[var(--space-8)]">
-              <DateInput name="date_from" defaultValue={params.date_from ?? ""} aria-label="Datum od" />
-              <DateInput name="date_to" defaultValue={params.date_to ?? ""} aria-label="Datum do" />
+              <DateInput
+                name="date_from"
+                defaultValue={params.date_from ?? ""}
+                aria-label="Dátum od"
+              />
+              <DateInput
+                name="date_to"
+                defaultValue={params.date_to ?? ""}
+                aria-label="Dátum do"
+              />
             </div>
-
             <Button type="submit" variant="secondary" size="sm">
-              Pouzit
+              Použiť
             </Button>
           </div>
         </form>
 
-        {params.notice ? <p className="mt-4 text-sm text-emerald-700">{params.notice}</p> : null}
-        {params.error ? <p className="mt-4 text-sm text-red-700">{params.error}</p> : null}
+        {params.notice ? <div className="ui-notice mt-4">{params.notice}</div> : null}
+        {params.error ? (
+          <div className="ui-notice ui-notice--error mt-4">{params.error}</div>
+        ) : null}
 
         {quotes.length === 0 ? (
           <div className="mt-4">
             <ListEmptyState
               title={
                 hasActiveFilters
-                  ? "Pre zvolene filtre sa nenasli ziadne ponuky."
-                  : "Zatial nemas ziadne ponuky."
+                  ? "Pre zvolené filtre sa nenašli žiadne ponuky."
+                  : "Zatiaľ nemáš žiadne ponuky."
               }
-              description="Vsetky nove ponuky sa zobrazia v tejto tabulke."
+              description="Všetky nové ponuky sa zobrazia v tejto tabuľke."
               action={
                 !hasActiveFilters ? (
                   <Link href="/quotes/new" className="btn-primary">
-                    Vytvorit prvu ponuku
+                    Vytvoriť prvú ponuku
                   </Link>
                 ) : null
               }
@@ -211,6 +195,7 @@ export default async function QuotesPage({ searchParams }: QuotesPageProps) {
           </div>
         ) : (
           <>
+            {/* ── Mobile cards ── */}
             <div className="mt-4 space-y-3 md:hidden">
               {quotes.map((quote) => {
                 const totals = calculateQuoteTotals({
@@ -220,124 +205,100 @@ export default async function QuotesPage({ searchParams }: QuotesPageProps) {
                   vatEnabled: quote.vatEnabled,
                   vatRate: quote.vatRate,
                 });
+                const remaining =
+                  metricsByQuoteId.get(quote.id)?.remainingToInvoice ?? totals.grandTotal;
 
                 return (
-                  <article key={quote.id} className="rounded-md border border-slate-200 p-3">
-                    <p className="text-sm font-semibold text-slate-900">{quote.number}</p>
-                    <p className="mt-1 text-sm text-slate-800">{quote.title}</p>
-                    <dl className="mt-2 space-y-1 text-xs text-slate-600">
-                      <div className="flex items-center justify-between gap-3">
-                        <dt>Klient</dt>
-                        <dd className="text-right text-slate-900">{quote.client.name}</dd>
+                  <article
+                    key={quote.id}
+                    className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
+                  >
+                    {/* Clickable header */}
+                    <Link
+                      href={`/quotes/${quote.id}`}
+                      className="flex items-start justify-between gap-3 border-b border-slate-100 px-4 py-3 transition-colors hover:bg-slate-50/70"
+                    >
+                      <div className="min-w-0">
+                        <p className="font-mono text-xs font-semibold text-slate-400">
+                          #{quote.number}
+                        </p>
+                        <p className="mt-0.5 truncate text-sm font-semibold text-slate-900">
+                          {quote.title}
+                        </p>
+                        <p className="mt-0.5 text-xs text-slate-500">{quote.client.name}</p>
                       </div>
-                      <div className="flex items-center justify-between gap-3">
-                        <dt>Stav</dt>
-                        <dd className="text-right text-slate-900">{formatQuoteStatus(quote.status)}</dd>
+                      <Badge tone={getStatusTone(quote.status)}>
+                        {formatQuoteStatus(quote.status)}
+                      </Badge>
+                    </Link>
+
+                    {/* Key metrics */}
+                    <dl className="grid grid-cols-3 gap-x-3 gap-y-2 px-4 py-3 text-xs">
+                      <div>
+                        <dt className="text-slate-400">Platná do</dt>
+                        <dd className="mt-0.5 font-medium text-slate-700">
+                          {formatDate(quote.validUntil)}
+                        </dd>
                       </div>
-                      <div className="flex items-center justify-between gap-3">
-                        <dt>Vytvorena</dt>
-                        <dd className="text-right text-slate-900">{formatDate(quote.createdAt)}</dd>
-                      </div>
-                      <div className="flex items-center justify-between gap-3">
-                        <dt>Platna do</dt>
-                        <dd className="text-right text-slate-900">{formatDate(quote.validUntil)}</dd>
-                      </div>
-                      <div className="flex items-center justify-between gap-3">
-                        <dt>Spolu bez DPH</dt>
-                        <dd className="text-right font-medium text-slate-900">
+                      <div>
+                        <dt className="text-slate-400">Suma</dt>
+                        <dd className="mt-0.5 font-semibold text-slate-900">
                           {formatCurrency(totals.taxableBase, quote.currency)}
                         </dd>
                       </div>
-                      <div className="flex items-center justify-between gap-3">
-                        <dt>Fakturovane</dt>
-                        <dd className="text-right text-slate-900">
-                          {formatCurrency(
-                            metricsByQuoteId.get(quote.id)?.invoicedAmount ?? 0,
-                            quote.currency,
-                          )}
-                        </dd>
-                      </div>
-                      <div className="flex items-center justify-between gap-3">
-                        <dt>Zostava</dt>
-                        <dd className="text-right text-slate-900">
-                          {formatCurrency(
-                            metricsByQuoteId.get(quote.id)?.remainingToInvoice ?? totals.grandTotal,
-                            quote.currency,
-                          )}
+                      <div>
+                        <dt className="text-slate-400">Zostatok</dt>
+                        <dd className="mt-0.5 font-semibold text-slate-900">
+                          {formatCurrency(remaining, quote.currency)}
                         </dd>
                       </div>
                     </dl>
-                    <div className="mt-3 flex flex-wrap gap-2">
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-2 border-t border-slate-100 px-4 py-3">
                       <Link
                         href={`/quotes/${quote.id}`}
-                        className="inline-flex min-w-[96px] flex-1 items-center justify-center rounded-md border border-slate-300 px-3 py-2 text-xs font-medium text-slate-700 transition hover:bg-slate-100"
+                        className="ui-btn ui-btn--secondary ui-btn--sm flex-1"
                       >
-                        Otvorit
+                        Otvoriť
                       </Link>
-                      <form action={duplicateQuoteAction} className="flex-1">
+                      <form action={duplicateQuoteAction}>
                         <input type="hidden" name="quote_id" value={quote.id} />
-                        <button
-                          type="submit"
-                          className="w-full rounded-md border border-slate-300 px-3 py-2 text-xs font-medium text-slate-700 transition hover:bg-slate-100"
-                        >
-                          Duplikovat
+                        <button type="submit" className="ui-btn ui-btn--secondary ui-btn--sm">
+                          Duplikovať
                         </button>
                       </form>
                       <a
                         href={`/api/quotes/${quote.id}/download`}
-                        className="inline-flex w-full flex-1 items-center justify-center rounded-md border border-slate-300 px-3 py-2 text-xs font-medium text-slate-700 transition hover:bg-slate-100"
+                        className="ui-btn ui-btn--secondary ui-btn--sm"
                       >
-                        Export PDF
+                        PDF
                       </a>
+                      <form action={deleteQuoteAction}>
+                        <input type="hidden" name="quote_id" value={quote.id} />
+                        <DeleteQuoteButton quoteNumber={quote.number} iconOnly />
+                      </form>
                     </div>
-                    <form action={changeQuoteStatusAction} className="mt-2 flex gap-2">
-                      <input type="hidden" name="quote_id" value={quote.id} />
-                      <select
-                        name="status"
-                        defaultValue={quote.status}
-                        className="w-full rounded-md border border-slate-300 px-2 py-2 text-xs"
-                      >
-                        {QUOTE_STATUS_OPTIONS.map((statusOption) => (
-                          <option key={statusOption} value={statusOption}>
-                            {formatQuoteStatus(statusOption)}
-                          </option>
-                        ))}
-                      </select>
-                      <button
-                        type="submit"
-                        className="rounded-md border border-slate-300 px-3 py-2 text-xs font-medium text-slate-700 transition hover:bg-slate-100"
-                      >
-                        Nastavit
-                      </button>
-                    </form>
-                    <form action={deleteQuoteAction} className="mt-2">
-                      <input type="hidden" name="quote_id" value={quote.id} />
-                      <DeleteQuoteButton quoteNumber={quote.number} />
-                    </form>
                   </article>
                 );
               })}
             </div>
 
+            {/* ── Desktop table ── */}
             <div className="mt-4 hidden md:block">
               <div className="ui-table-wrap">
                 <table className="ui-table">
                   <thead>
                     <tr>
-                      <th className="ui-table-cell--text">Cislo</th>
-                      <th className="ui-table-cell--text">Nazov</th>
-                      <th className="ui-table-cell--text">Klient</th>
+                      <th className="ui-table-cell--text w-28">Číslo</th>
+                      <th className="ui-table-cell--text">Ponuka</th>
                       <th className="ui-table-cell--text">Stav</th>
-                      <th className="ui-table-cell--text">Vytvorena</th>
-                      <th className="ui-table-cell--text">Platna do</th>
-                      <th className="ui-table-cell--number">Spolu bez DPH</th>
-                      <th className="ui-table-cell--number">Fakturovane</th>
-                      <th className="ui-table-cell--number">Zostava</th>
-                      <th className="ui-table-cell--number">Mena</th>
-                      <th className="ui-table-cell--number">Akcie</th>
+                      <th className="ui-table-cell--text">Platná do</th>
+                      <th className="ui-table-cell--number">Suma bez DPH</th>
+                      <th className="ui-table-cell--number">Zostatok</th>
+                      <th className="ui-table-cell--number w-36">Akcie</th>
                     </tr>
                   </thead>
-
                   <tbody>
                     {quotes.map((quote) => {
                       const totals = calculateQuoteTotals({
@@ -347,66 +308,81 @@ export default async function QuotesPage({ searchParams }: QuotesPageProps) {
                         vatEnabled: quote.vatEnabled,
                         vatRate: quote.vatRate,
                       });
+                      const remaining =
+                        metricsByQuoteId.get(quote.id)?.remainingToInvoice ?? totals.grandTotal;
 
                       return (
                         <tr key={quote.id} className="ui-table-row">
-                          <td className="ui-table-cell--text ui-table-cell--strong">{quote.number}</td>
-                          <td className="ui-table-cell--text ui-table-cell--strong">{quote.title}</td>
-                          <td className="ui-table-cell--text">{quote.client.name}</td>
+                          {/* Číslo */}
                           <td className="ui-table-cell--text">
-                            <Badge tone={getStatusTone(quote.status)}>{formatQuoteStatus(quote.status)}</Badge>
+                            <Link
+                              href={`/quotes/${quote.id}`}
+                              className="font-mono text-xs font-semibold text-slate-400 transition-colors hover:text-indigo-600"
+                            >
+                              #{quote.number}
+                            </Link>
                           </td>
-                          <td className="ui-table-cell--text">{formatDate(quote.createdAt)}</td>
-                          <td className="ui-table-cell--text">{formatDate(quote.validUntil)}</td>
-                          <td className="ui-table-cell--number ui-table-cell--strong">
-                            {formatCurrency(totals.taxableBase, quote.currency)}
+
+                          {/* Ponuka + Klient */}
+                          <td className="ui-table-cell--text max-w-xs">
+                            <Link href={`/quotes/${quote.id}`} className="block">
+                              <span className="font-semibold text-slate-900 transition-colors hover:text-indigo-600">
+                                {quote.title}
+                              </span>
+                              <span className="mt-0.5 block text-xs text-slate-400">
+                                {quote.client.name}
+                              </span>
+                            </Link>
                           </td>
+
+                          {/* Stav — klikateľný badge */}
+                          <td className="ui-table-cell--text">
+                            <QuoteStatusSelect quoteId={quote.id} status={quote.status} />
+                          </td>
+
+                          {/* Platná do */}
+                          <td className="ui-table-cell--text tabular-nums text-slate-500">
+                            {formatDate(quote.validUntil)}
+                          </td>
+
+                          {/* Suma bez DPH */}
                           <td className="ui-table-cell--number">
-                            {formatCurrency(
-                              metricsByQuoteId.get(quote.id)?.invoicedAmount ?? 0,
-                              quote.currency,
-                            )}
+                            <span className="font-semibold text-slate-900">
+                              {formatCurrency(totals.taxableBase, quote.currency)}
+                            </span>
+                            <span className="mt-0.5 block text-xs text-slate-400">
+                              {quote.currency}
+                            </span>
                           </td>
-                          <td className="ui-table-cell--number">
-                            {formatCurrency(
-                              metricsByQuoteId.get(quote.id)?.remainingToInvoice ?? totals.grandTotal,
-                              quote.currency,
-                            )}
+
+                          {/* Zostatok */}
+                          <td className="ui-table-cell--number font-medium text-slate-700">
+                            {formatCurrency(remaining, quote.currency)}
                           </td>
-                          <td className="ui-table-cell--number">{quote.currency}</td>
+
+                          {/* Akcie */}
                           <td className="ui-table-cell--number">
                             <div className="ui-table-actions">
-                              <IconActionLink href={`/quotes/${quote.id}`} label="Otvorit ponuku">
+                              <IconActionLink
+                                href={`/quotes/${quote.id}`}
+                                label="Otvoriť ponuku"
+                              >
                                 <OpenIcon />
                               </IconActionLink>
 
                               <form action={duplicateQuoteAction}>
                                 <input type="hidden" name="quote_id" value={quote.id} />
-                                <IconActionButton type="submit" label="Duplikovat ponuku">
+                                <IconActionButton type="submit" label="Duplikovať ponuku">
                                   <DuplicateIcon />
                                 </IconActionButton>
                               </form>
 
                               <IconActionLink
                                 href={`/api/quotes/${quote.id}/download`}
-                                label="Exportovat PDF"
+                                label="Exportovať PDF"
                               >
                                 <ExportIcon />
                               </IconActionLink>
-
-                              <form action={changeQuoteStatusAction} className="ui-table-status">
-                                <input type="hidden" name="quote_id" value={quote.id} />
-                                <Select name="status" defaultValue={quote.status} aria-label="Zmenit stav ponuky">
-                                  {QUOTE_STATUS_OPTIONS.map((statusOption) => (
-                                    <option key={statusOption} value={statusOption}>
-                                      {formatQuoteStatus(statusOption)}
-                                    </option>
-                                  ))}
-                                </Select>
-                                <IconActionButton type="submit" label="Ulozit stav">
-                                  <StatusIcon />
-                                </IconActionButton>
-                              </form>
 
                               <form action={deleteQuoteAction}>
                                 <input type="hidden" name="quote_id" value={quote.id} />

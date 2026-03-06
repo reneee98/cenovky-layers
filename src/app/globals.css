@@ -23,19 +23,28 @@
 
   /* Neutral palette + single accent */
   --color-white: #ffffff;
-  --color-bg: #f6f6f4;
-  --color-bg-soft: #fcfcfb;
-  --color-ink: #121316;
-  --color-gray-700: #4b515c;
-  --color-gray-500: #6a717d;
-  --color-gray-300: #d7dbe3;
-  --color-gray-200: #e8ebf0;
+  --color-bg: #f8fafc;
+  --color-bg-soft: #ffffff;
+  --color-ink: #0f172a;
+  --color-gray-700: #334155;
+  --color-gray-500: #64748b;
+  --color-gray-300: #cbd5e1;
+  --color-gray-200: #e2e8f0;
   --color-border: var(--color-gray-300);
-  --color-accent: #155dfc;
-  --color-accent-hover: #0f4fd9;
-  --color-danger: #b93f2e;
-  --color-danger-hover: #a53526;
-  --color-success: #177652;
+  --color-accent: #6366f1;
+  --color-accent-hover: #4f46e5;
+  --color-danger: #dc2626;
+  --color-danger-hover: #b91c1c;
+  --color-success: #059669;
+  --color-warning: #d97706;
+
+  /* Sidebar tokens */
+  --sidebar-bg: #0f172a;
+  --sidebar-border: #1e293b;
+  --sidebar-text: #94a3b8;
+  --sidebar-text-active: #ffffff;
+  --sidebar-active-bg: rgba(99, 102, 241, 0.14);
+  --sidebar-hover-bg: #1e293b;
 
   /* Motion and focus */
   --motion-fast: 160ms;
@@ -264,7 +273,7 @@ body {
 .app-drawer__backdrop {
   position: fixed;
   inset: 0;
-  background: rgb(18 19 22 / 0.36);
+  background: rgb(15 23 42 / 0.5);
   opacity: 0;
   pointer-events: none;
   transition: opacity var(--motion-fast) var(--easing-standard);
@@ -279,10 +288,8 @@ body {
   width: min(88vw, 360px);
   max-width: 100%;
   transform: translateX(-100%);
-  border-right: var(--border-width) solid var(--color-border);
-  background:
-    radial-gradient(circle at top left, rgb(21 93 252 / 0.08) 0, transparent 48%),
-    var(--color-bg);
+  border-right: var(--border-width) solid var(--sidebar-border);
+  background: var(--sidebar-bg);
   box-shadow: 0 16px 38px rgb(18 19 22 / 0.22);
   padding: 20px var(--space-16);
   z-index: 31;
@@ -1634,32 +1641,35 @@ body {
 }
 
 .ui-table-wrap {
-  overflow: auto;
+  overflow-x: auto;
   max-width: 100%;
-  border: var(--border-width) solid color-mix(in srgb, var(--color-border) 92%, white);
+  border: var(--border-width) solid #e2e8f0;
   border-radius: var(--radius-16);
   background: var(--color-white);
+  box-shadow:
+    0 1px 3px rgba(15, 23, 42, 0.06),
+    0 4px 8px rgba(15, 23, 42, 0.03);
 }
 
 .ui-table {
   width: 100%;
   min-width: 760px;
-  border-collapse: separate;
-  border-spacing: 0;
+  border-collapse: collapse;
   text-align: left;
+  font-size: 0.875rem;
 }
 
 .ui-table thead th {
   position: sticky;
   top: 0;
   z-index: 1;
-  background: color-mix(in srgb, var(--color-bg-soft) 72%, white);
-  color: var(--color-gray-500);
-  border-bottom: var(--border-width) solid var(--color-border);
-  padding: 11px var(--space-16);
-  font-size: 0.74rem;
-  font-weight: 640;
-  letter-spacing: 0.08em;
+  background: rgba(248, 250, 252, 0.85);
+  color: #94a3b8;
+  border-bottom: 1px solid #f1f5f9;
+  padding: 12px 24px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   white-space: nowrap;
 }
@@ -1670,10 +1680,12 @@ body {
 }
 
 .ui-table tbody td {
-  padding: var(--space-16);
-  border-bottom: var(--border-width) solid color-mix(in srgb, var(--color-gray-200) 78%, white);
-  color: var(--color-gray-700);
-  vertical-align: top;
+  padding: 14px 24px;
+  border-bottom: 1px solid #f1f5f9;
+  color: #64748b;
+  vertical-align: middle;
+  font-size: 0.875rem;
+  line-height: 1.45;
 }
 
 .ui-table tbody tr:last-child td {
@@ -1681,18 +1693,16 @@ body {
 }
 
 .ui-table-row {
-  transition:
-    background var(--motion-fast) var(--easing-standard),
-    box-shadow var(--motion-fast) var(--easing-standard);
+  transition: background 120ms ease;
 }
 
 .ui-table-row:hover {
-  background: color-mix(in srgb, var(--color-gray-200) 34%, white);
+  background: rgba(248, 250, 252, 0.9);
 }
 
 .ui-table-row:focus-within,
 .ui-table-row[data-selected="true"] {
-  background: color-mix(in srgb, var(--color-accent) 9%, white);
+  background: color-mix(in srgb, var(--color-accent) 7%, white);
 }
 
 .ui-table-cell--text {
@@ -1705,8 +1715,8 @@ body {
 }
 
 .ui-table-cell--strong {
-  color: var(--color-ink) !important;
-  font-weight: 560;
+  color: #0f172a !important;
+  font-weight: 600;
 }
 
 .ui-table-actions {
@@ -1827,6 +1837,30 @@ body {
   color: var(--color-gray-500);
 }
 
+/* Notice / Alert */
+.ui-notice {
+  border: var(--border-width) solid color-mix(in srgb, var(--color-success) 30%, var(--color-border));
+  border-radius: var(--radius-12);
+  background: color-mix(in srgb, var(--color-success) 8%, white);
+  color: color-mix(in srgb, var(--color-success) 80%, black);
+  padding: var(--space-12) var(--space-16);
+  font-size: var(--text-small-size);
+  font-weight: 500;
+  line-height: 1.45;
+}
+
+.ui-notice--error {
+  border-color: color-mix(in srgb, var(--color-danger) 28%, var(--color-border));
+  background: color-mix(in srgb, var(--color-danger) 7%, white);
+  color: color-mix(in srgb, var(--color-danger) 75%, black);
+}
+
+.ui-notice--warning {
+  border-color: color-mix(in srgb, var(--color-warning) 28%, var(--color-border));
+  background: color-mix(in srgb, var(--color-warning) 8%, white);
+  color: color-mix(in srgb, var(--color-warning) 80%, black);
+}
+
 @keyframes ui-modal-enter {
   from {
     opacity: 0;
@@ -1836,6 +1870,21 @@ body {
     opacity: 1;
     transform: translateY(0) scale(1);
   }
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 240ms var(--easing-standard) both;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1921,10 +1970,8 @@ body {
     padding-block: var(--page-padding-block);
     padding-left: var(--page-padding-inline);
     padding-right: var(--space-16);
-    border-right: var(--border-width) solid color-mix(in srgb, var(--color-border) 78%, white);
-    background:
-      radial-gradient(circle at top left, rgb(21 93 252 / 0.06) 0, transparent 46%),
-      color-mix(in srgb, var(--color-bg-soft) 64%, white);
+    border-right: var(--border-width) solid var(--sidebar-border);
+    background: var(--sidebar-bg);
   }
 
   .app-sidebar__inner {

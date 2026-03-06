@@ -19,39 +19,44 @@ export default async function NewQuotePage({ searchParams }: NewQuotePageProps) 
   return (
     <AppShell
       active="quotes"
-      title="Vytvorit ponuku"
-      description="Zacni novu konceptovu ponuku s predvolenymi hodnotami."
+      title="Vytvoriť ponuku"
+      description="Začni novú konceptovú ponuku s predvolenými hodnotami."
       headerActions={
         <Link
           href="/quotes"
           className="ui-btn ui-btn--secondary ui-btn--md w-full sm:w-auto"
         >
-          Spat na zoznam
+          Späť na zoznam
         </Link>
       }
     >
       <section className="ui-page-section">
         {clients.length === 0 ? (
-          <div className="rounded-md border border-dashed border-slate-300 bg-slate-50 p-6 text-sm text-slate-600">
-            <p>Pred vytvorenim ponuky musis mat aspon jedneho klienta.</p>
+          <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-sm text-slate-600">
+            <p className="font-medium text-slate-700">Pred vytvorením ponuky musíš mať aspoň jedného klienta.</p>
             <Link
               href="/clients/new"
-              className="mt-3 inline-flex text-sm font-medium text-slate-900 underline underline-offset-4"
+              className="mt-3 inline-flex text-sm font-medium text-indigo-600 transition-colors hover:text-indigo-700"
             >
-              Vytvorit prveho klienta
+              Vytvoriť prvého klienta →
             </Link>
           </div>
         ) : (
           <form action={createDraftQuoteAction} className="space-y-4">
-            {params.error ? <p className="text-sm text-red-700">{params.error}</p> : null}
+            {params.error ? (
+              <div className="ui-notice ui-notice--error">{params.error}</div>
+            ) : null}
 
             <div className="grid gap-4 md:grid-cols-2">
-              <label className="block text-sm text-slate-700">
-                Klient
+              <div>
+                <label className="ui-field-label" htmlFor="new-quote-client">
+                  Klient
+                </label>
                 <select
+                  id="new-quote-client"
                   name="client_id"
                   required
-                  className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                  className="ui-control ui-select"
                 >
                   {clients.map((client) => (
                     <option key={client.id} value={client.id}>
@@ -59,24 +64,24 @@ export default async function NewQuotePage({ searchParams }: NewQuotePageProps) 
                     </option>
                   ))}
                 </select>
-              </label>
+              </div>
 
-              <label className="block text-sm text-slate-700">
-                Nazov (volitelne)
+              <div>
+                <label className="ui-field-label" htmlFor="new-quote-title">
+                  Názov <span className="font-normal text-slate-400">(voliteľné)</span>
+                </label>
                 <input
+                  id="new-quote-title"
                   name="title"
                   type="text"
                   placeholder="Ponuka na redizajn webu"
-                  className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                  className="ui-control"
                 />
-              </label>
+              </div>
             </div>
 
-            <button
-              type="submit"
-              className="inline-flex items-center justify-center rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-700"
-            >
-              Vytvorit koncept ponuky
+            <button type="submit" className="ui-btn ui-btn--primary ui-btn--md">
+              Vytvoriť koncept ponuky
             </button>
           </form>
         )}

@@ -15,49 +15,72 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const next = params.next && params.next.startsWith("/") ? params.next : "/";
 
   return (
-    <div className="space-y-4">
-      {params.notice ? <p className="text-sm text-emerald-700">{params.notice}</p> : null}
-      {params.error ? <p className="text-sm text-red-700">{params.error}</p> : null}
+    <div className="space-y-5">
+      <div>
+        <h2 className="text-lg font-bold tracking-tight text-slate-900">Prihlásenie</h2>
+        <p className="mt-0.5 text-sm text-slate-500">Zadaj svoje prihlasovacie údaje.</p>
+      </div>
 
-      <form action={loginAction} className="space-y-3">
+      {params.notice ? (
+        <div className="ui-notice">{params.notice}</div>
+      ) : null}
+      {params.error ? (
+        <div className="ui-notice ui-notice--error">{params.error}</div>
+      ) : null}
+
+      <form action={loginAction} className="space-y-4">
         <input type="hidden" name="next" value={next} />
 
-        <label className="block text-sm text-slate-700">
-          Email
+        <div>
+          <label className="ui-field-label" htmlFor="login-email">
+            Email
+          </label>
           <input
+            id="login-email"
             type="email"
             name="email"
             required
             autoComplete="email"
-            className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            className="ui-control"
+            placeholder="jan@example.sk"
           />
-        </label>
+        </div>
 
-        <label className="block text-sm text-slate-700">
-          Heslo
+        <div>
+          <label className="ui-field-label" htmlFor="login-password">
+            Heslo
+          </label>
           <input
+            id="login-password"
             type="password"
             name="password"
             required
             autoComplete="current-password"
-            className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            className="ui-control"
+            placeholder="••••••••"
           />
-        </label>
+        </div>
 
         <button
           type="submit"
-          className="inline-flex w-full items-center justify-center rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-700"
+          className="ui-btn ui-btn--primary ui-btn--md w-full"
         >
-          Prihlasit sa
+          Prihlásiť sa
         </button>
       </form>
 
-      <div className="flex items-center justify-between text-sm">
-        <Link href="/auth/forgot-password" className="text-slate-600 underline underline-offset-4">
-          Zabudnute heslo
+      <div className="flex items-center justify-between border-t border-slate-100 pt-4 text-sm">
+        <Link
+          href="/auth/forgot-password"
+          className="text-indigo-600 transition-colors hover:text-indigo-700"
+        >
+          Zabudnuté heslo?
         </Link>
-        <Link href="/auth/signup" className="text-slate-600 underline underline-offset-4">
-          Vytvorit ucet
+        <Link
+          href="/auth/signup"
+          className="font-medium text-indigo-600 transition-colors hover:text-indigo-700"
+        >
+          Vytvoriť účet
         </Link>
       </div>
     </div>

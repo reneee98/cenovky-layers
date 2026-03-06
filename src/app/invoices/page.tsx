@@ -148,10 +148,10 @@ export default async function InvoicesPage({ searchParams }: InvoicesPageProps) 
         />
 
         {params.notice ? (
-          <p className="mt-3 text-sm text-emerald-700">{params.notice}</p>
+          <div className="ui-notice mt-3">{params.notice}</div>
         ) : null}
         {params.error ? (
-          <p className="mt-3 text-sm text-red-700">{params.error}</p>
+          <div className="ui-notice ui-notice--error mt-3">{params.error}</div>
         ) : null}
 
         {invoices.length === 0 ? (

@@ -9,6 +9,8 @@ import {
   ReceiptText,
   Settings,
   Users,
+  X,
+  LogOut,
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { logoutAction } from "@/app/auth/actions";
@@ -17,36 +19,36 @@ import { getOptionalUser } from "@/lib/auth";
 const NAV_ITEMS = [
   {
     key: "dashboard",
-    label: "Prehlad",
-    description: "Rychly stav pipeline",
+    label: "Prehľad",
+    description: "Rýchly stav pipeline",
     href: "/",
     icon: LayoutDashboard,
   },
   {
     key: "quotes",
     label: "Ponuky",
-    description: "Vsetky cenove ponuky",
+    description: "Všetky cenové ponuky",
     href: "/quotes",
     icon: FileText,
   },
   {
     key: "clients",
     label: "Klienti",
-    description: "Kontaktne a fakturacne data",
+    description: "Kontaktné a fakturačné dáta",
     href: "/clients",
     icon: Users,
   },
   {
     key: "invoices",
-    label: "Faktury",
-    description: "Evidencia vystavenych faktur",
+    label: "Faktúry",
+    description: "Evidencia vystavených faktúr",
     href: "/invoices",
     icon: ReceiptText,
   },
   {
     key: "catalog",
-    label: "Katalog",
-    description: "Cennik sluzieb",
+    label: "Katalóg",
+    description: "Cenník služieb",
     href: "/catalog",
     icon: Package,
   },
@@ -87,77 +89,83 @@ function NavigationLink({ item, isActive }: NavigationLinkProps) {
   return (
     <Link
       href={item.href}
-      className={`group mx-3 flex items-center gap-3 rounded-lg px-3 py-2 transition-all ${
+      className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all duration-150 ${
         isActive
-          ? "bg-blue-50 text-blue-700"
-          : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+          ? "bg-indigo-500/[0.14] text-white"
+          : "text-slate-400 hover:bg-slate-800 hover:text-slate-100"
       }`}
       aria-current={isActive ? "page" : undefined}
     >
       <Icon
-        className={`h-[18px] w-[18px] shrink-0 transition-colors ${
-          isActive ? "text-blue-600" : "text-slate-400 group-hover:text-slate-600"
+        className={`h-[17px] w-[17px] shrink-0 transition-colors ${
+          isActive ? "text-indigo-400" : "text-slate-500 group-hover:text-slate-300"
         }`}
       />
       <span className="min-w-0 flex-1">
-        <span className="block text-sm font-medium leading-none">{item.label}</span>
-        <span className="mt-1 block truncate text-[11px] text-slate-400">{item.description}</span>
+        <span className="block font-medium leading-none tracking-[-0.01em]">{item.label}</span>
+        <span className="mt-0.5 block truncate text-[11px] leading-none text-slate-500 group-hover:text-slate-400">
+          {item.description}
+        </span>
       </span>
+      {isActive && (
+        <span className="ml-auto h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-400" />
+      )}
     </Link>
   );
 }
 
 function Navigation({ active, userEmail }: NavigationProps) {
+  const initials = userEmail.slice(0, 2).toUpperCase();
+
   return (
-    <nav aria-label="Hlavna navigacia" className="flex h-full flex-col">
-      <div className="px-4 pb-2 pt-4">
-        <Link href="/" className="px-3">
-          <span className="text-lg font-bold tracking-tight text-slate-900">Cenovka</span>
+    <nav aria-label="Hlavná navigácia" className="flex h-full flex-col overflow-y-auto">
+      {/* Brand */}
+      <div className="px-5 pb-4 pt-5">
+        <Link href="/" className="flex items-center gap-2.5 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-500 text-xs font-bold text-white shadow-lg shadow-indigo-500/30">
+            C
+          </span>
+          <span className="text-[15px] font-bold tracking-tight text-white">Cenovka</span>
         </Link>
       </div>
 
-      <div className="px-5 pb-6 pt-3">
+      {/* CTA */}
+      <div className="px-4 pb-5">
         <Link
           href="/quotes/new"
-          className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-slate-900/10 transition-all hover:bg-blue-600 hover:shadow-blue-600/20"
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-500 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-500/20 transition-all duration-150 hover:bg-indigo-400 hover:shadow-indigo-400/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
         >
-          <Plus className="h-4 w-4 text-slate-300" />
-          Nova ponuka
+          <Plus className="h-4 w-4" />
+          Nová ponuka
         </Link>
       </div>
 
-      <div className="px-5 pb-2 text-[10px] font-bold uppercase tracking-[0.24em] text-slate-400">
-        Menu
-      </div>
-
-      <ul className="space-y-1 pb-6">
-        {NAV_ITEMS.map((item) => {
-          const isActive = item.key === active;
-
-          return (
-            <li key={item.key} className="list-none">
-              <NavigationLink item={item} isActive={isActive} />
-            </li>
-          );
-        })}
+      {/* Nav items */}
+      <ul className="flex-1 space-y-0.5 px-3 pb-4">
+        {NAV_ITEMS.map((item) => (
+          <li key={item.key}>
+            <NavigationLink item={item} isActive={item.key === active} />
+          </li>
+        ))}
       </ul>
 
-      <div className="mt-auto border-t border-slate-100 bg-slate-50/30 p-4">
-        <div className="flex items-center gap-3 rounded-xl border border-transparent p-2 transition-all hover:border-slate-200 hover:bg-white hover:shadow-sm">
-          <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-gradient-to-br from-slate-100 to-slate-200 text-xs font-bold text-slate-600">
-            {userEmail.slice(0, 1).toUpperCase()}
+      {/* User section */}
+      <div className="border-t border-slate-800 px-4 pb-4 pt-3">
+        <div className="mb-2 flex items-center gap-3 rounded-xl px-2 py-2">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-indigo-600 text-xs font-bold text-white shadow-md shadow-indigo-900/50">
+            {initials}
           </span>
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-slate-700">Prihlaseny pouzivatel</p>
-            <p className="truncate text-xs text-slate-400">{userEmail}</p>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-xs font-medium text-slate-300">{userEmail}</p>
           </div>
         </div>
-        <form action={logoutAction} className="mt-2">
+        <form action={logoutAction}>
           <button
             type="submit"
-            className="inline-flex w-full items-center justify-center rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600 transition hover:bg-white"
+            className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-slate-500 transition-colors hover:bg-slate-800 hover:text-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
           >
-            Odhlasit sa
+            <LogOut className="h-3.5 w-3.5" />
+            Odhlásiť sa
           </button>
         </form>
       </div>
@@ -181,54 +189,64 @@ export async function AppShell({
       <input
         id={drawerId}
         type="checkbox"
-        className="peer sr-only lg:hidden"
+        className="peer sr-only"
         aria-hidden="true"
       />
 
-      <div className="sticky top-0 z-40 flex items-center justify-between border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur lg:hidden">
+      {/* Mobile top bar */}
+      <div className="sticky top-0 z-40 flex items-center justify-between gap-3 border-b border-slate-200 bg-white/95 px-4 py-3 shadow-sm backdrop-blur-md lg:hidden">
         <label
           htmlFor={drawerId}
-          className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 px-3 text-sm font-medium text-slate-700"
+          className="flex h-9 cursor-pointer items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 hover:border-slate-300"
         >
           <Menu className="h-4 w-4" />
-          Menu
+          <span>Menu</span>
         </label>
-        <Link href="/" className="text-sm font-semibold tracking-tight text-slate-900">
-          Cenovka
+
+        <Link href="/" className="flex items-center gap-2 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+          <span className="flex h-6 w-6 items-center justify-center rounded-md bg-indigo-500 text-[10px] font-bold text-white">C</span>
+          <span className="text-sm font-bold tracking-tight text-slate-900">Cenovka</span>
         </Link>
+
         <Link
           href="/settings"
-          className="inline-flex h-9 items-center justify-center rounded-lg border border-slate-200 px-3 text-sm font-medium text-slate-700"
+          className="flex h-9 items-center justify-center rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 hover:border-slate-300"
         >
-          Nastavenia
+          <Settings className="h-4 w-4" />
         </Link>
       </div>
 
+      {/* Backdrop */}
       <label
         htmlFor={drawerId}
-        className="pointer-events-none fixed inset-0 z-40 bg-slate-950/35 opacity-0 transition-opacity peer-checked:pointer-events-auto peer-checked:opacity-100 lg:hidden"
+        className="pointer-events-none fixed inset-0 z-40 bg-slate-950/50 opacity-0 backdrop-blur-sm transition-opacity duration-200 peer-checked:pointer-events-auto peer-checked:opacity-100 lg:hidden"
         aria-hidden="true"
       />
 
-      <aside className="fixed inset-y-0 left-0 z-50 flex h-screen w-72 max-w-[85vw] -translate-x-full flex-col border-r border-slate-200 bg-white shadow-[4px_0_24px_-12px_rgba(0,0,0,0.15)] transition-transform duration-200 peer-checked:translate-x-0 lg:w-64 lg:max-w-none lg:translate-x-0 lg:shadow-[4px_0_24px_-12px_rgba(0,0,0,0.02)]">
-        <div className="flex items-center justify-end border-b border-slate-100 px-4 py-3 lg:hidden">
+      {/* Sidebar */}
+      <aside className="fixed inset-y-0 left-0 z-50 flex h-screen w-72 max-w-[85vw] -translate-x-full flex-col border-r border-slate-800 bg-slate-900 shadow-2xl transition-transform duration-200 ease-out peer-checked:translate-x-0 lg:w-64 lg:max-w-none lg:translate-x-0 lg:shadow-none">
+        {/* Mobile close button */}
+        <div className="flex items-center justify-end border-b border-slate-800 px-4 py-3 lg:hidden">
           <label
             htmlFor={drawerId}
-            className="inline-flex h-8 items-center rounded-md border border-slate-200 px-3 text-xs font-semibold uppercase tracking-wide text-slate-600"
+            className="flex h-8 cursor-pointer items-center gap-1.5 rounded-lg border border-slate-700 px-3 text-xs font-medium text-slate-400 transition hover:border-slate-600 hover:text-slate-200"
           >
-            Zavriet
+            <X className="h-3.5 w-3.5" />
+            Zavrieť
           </label>
         </div>
+
         <Navigation active={active} userEmail={userEmail} />
       </aside>
 
+      {/* Main content */}
       <main className="lg:ml-64">
-        <div className="mx-auto w-full max-w-[1660px] px-4 pb-10 pt-5 sm:px-6 sm:pt-6 lg:px-10 lg:pt-10 xl:px-12">
+        <div className="mx-auto w-full max-w-[1660px] px-4 pb-12 pt-6 sm:px-6 sm:pt-7 lg:px-10 lg:pt-10 xl:px-12">
           <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
             <div className="min-w-[240px] flex-1">
-              <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">{title}</h1>
+              <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">{title}</h1>
               {description ? (
-                <p className="mt-1.5 text-sm font-medium text-slate-500">{description}</p>
+                <p className="mt-1.5 text-sm text-slate-500">{description}</p>
               ) : null}
             </div>
             {headerActions ? (

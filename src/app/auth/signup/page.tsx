@@ -13,60 +13,84 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
   const params = await searchParams;
 
   return (
-    <div className="space-y-4">
-      {params.notice ? <p className="text-sm text-emerald-700">{params.notice}</p> : null}
-      {params.error ? <p className="text-sm text-red-700">{params.error}</p> : null}
+    <div className="space-y-5">
+      <div>
+        <h2 className="text-lg font-bold tracking-tight text-slate-900">Vytvorenie účtu</h2>
+        <p className="mt-0.5 text-sm text-slate-500">Registrácia je bezplatná.</p>
+      </div>
 
-      <form action={signupAction} className="space-y-3">
-        <label className="block text-sm text-slate-700">
-          Email
+      {params.notice ? (
+        <div className="ui-notice">{params.notice}</div>
+      ) : null}
+      {params.error ? (
+        <div className="ui-notice ui-notice--error">{params.error}</div>
+      ) : null}
+
+      <form action={signupAction} className="space-y-4">
+        <div>
+          <label className="ui-field-label" htmlFor="signup-email">
+            Email
+          </label>
           <input
+            id="signup-email"
             type="email"
             name="email"
             required
             autoComplete="email"
-            className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            className="ui-control"
+            placeholder="jan@example.sk"
           />
-        </label>
+        </div>
 
-        <label className="block text-sm text-slate-700">
-          Heslo
+        <div>
+          <label className="ui-field-label" htmlFor="signup-password">
+            Heslo
+          </label>
           <input
+            id="signup-password"
             type="password"
             name="password"
             required
             minLength={8}
             autoComplete="new-password"
-            className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            className="ui-control"
+            placeholder="Min. 8 znakov"
           />
-        </label>
+        </div>
 
-        <label className="block text-sm text-slate-700">
-          Potvrdit heslo
+        <div>
+          <label className="ui-field-label" htmlFor="signup-confirm">
+            Potvrdiť heslo
+          </label>
           <input
+            id="signup-confirm"
             type="password"
             name="confirm_password"
             required
             minLength={8}
             autoComplete="new-password"
-            className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            className="ui-control"
+            placeholder="Zopakuj heslo"
           />
-        </label>
+        </div>
 
         <button
           type="submit"
-          className="inline-flex w-full items-center justify-center rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-700"
+          className="ui-btn ui-btn--primary ui-btn--md w-full"
         >
-          Vytvorit ucet
+          Vytvoriť účet
         </button>
       </form>
 
-      <p className="text-sm text-slate-600">
-        Uz mas ucet?{" "}
-        <Link href="/auth/login" className="underline underline-offset-4">
-          Prihlasit sa
+      <div className="border-t border-slate-100 pt-4 text-center text-sm text-slate-500">
+        Už máš účet?{" "}
+        <Link
+          href="/auth/login"
+          className="font-medium text-indigo-600 transition-colors hover:text-indigo-700"
+        >
+          Prihlásiť sa
         </Link>
-      </p>
+      </div>
     </div>
   );
 }
