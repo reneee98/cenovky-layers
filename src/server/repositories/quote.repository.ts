@@ -43,6 +43,11 @@ type QuoteRow = {
   updatedAt: Date | string;
 };
 
+type LegacyQuoteRow = Omit<
+  QuoteRow,
+  "showClientDetailsInPdf" | "showCompanyDetailsInPdf" | "invoicingState"
+>;
+
 type QuoteItemRow = {
   id: string;
   userId: string;
@@ -80,6 +85,15 @@ function mapQuoteRow(row: QuoteRow) {
     totalDiscountValue: numericToNumber(row.totalDiscountValue),
     createdAt: toDate(row.createdAt),
     updatedAt: toDate(row.updatedAt),
+  };
+}
+
+function withLegacyQuoteDefaults(row: LegacyQuoteRow): QuoteRow {
+  return {
+    ...row,
+    showClientDetailsInPdf: true,
+    showCompanyDetailsInPdf: true,
+    invoicingState: "not_invoiced",
   };
 }
 
@@ -283,36 +297,71 @@ export async function listQuoteCurrencies(userId: string): Promise<string[]> {
 }
 
 export async function getQuoteById(userId: string, id: string) {
-  const row = await dbQueryOne<QuoteRow>(
-    `SELECT
-      id,
-      user_id AS "userId",
-      number,
-      title,
-      status,
-      client_id AS "clientId",
-      language,
-      currency,
-      valid_until AS "validUntil",
-      vat_enabled AS "vatEnabled",
-      vat_rate AS "vatRate",
-      show_client_details_in_pdf AS "showClientDetailsInPdf",
-      show_company_details_in_pdf AS "showCompanyDetailsInPdf",
-      intro_content_markdown AS "introContentMarkdown",
-      terms_content_markdown AS "termsContentMarkdown",
-      revisions_included AS "revisionsIncluded",
-      total_discount_type AS "totalDiscountType",
-      total_discount_value AS "totalDiscountValue",
-      invoicing_state AS "invoicingState",
-      created_at AS "createdAt",
-      updated_at AS "updatedAt"
-    FROM quotes
-    WHERE id = $1 AND user_id = $2
-    LIMIT 1`,
-    [id, userId],
-  );
+  try {
+    const row = await dbQueryOne<QuoteRow>(
+      `SELECT
+        id,
+        user_id AS "userId",
+        number,
+        title,
+        status,
+        client_id AS "clientId",
+        language,
+        currency,
+        valid_until AS "validUntil",
+        vat_enabled AS "vatEnabled",
+        vat_rate AS "vatRate",
+        show_client_details_in_pdf AS "showClientDetailsInPdf",
+        show_company_details_in_pdf AS "showCompanyDetailsInPdf",
+        intro_content_markdown AS "introContentMarkdown",
+        terms_content_markdown AS "termsContentMarkdown",
+        revisions_included AS "revisionsIncluded",
+        total_discount_type AS "totalDiscountType",
+        total_discount_value AS "totalDiscountValue",
+        invoicing_state AS "invoicingState",
+        created_at AS "createdAt",
+        updated_at AS "updatedAt"
+      FROM quotes
+      WHERE id = $1 AND user_id = $2
+      LIMIT 1`,
+      [id, userId],
+    );
 
-  return row ? mapQuoteRow(row) : null;
+    return row ? mapQuoteRow(row) : null;
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    if (!msg.includes("column") && !msg.includes("does not exist")) {
+      throw error;
+    }
+
+    const legacyRow = await dbQueryOne<LegacyQuoteRow>(
+      `SELECT
+        id,
+        user_id AS "userId",
+        number,
+        title,
+        status,
+        client_id AS "clientId",
+        language,
+        currency,
+        valid_until AS "validUntil",
+        vat_enabled AS "vatEnabled",
+        vat_rate AS "vatRate",
+        intro_content_markdown AS "introContentMarkdown",
+        terms_content_markdown AS "termsContentMarkdown",
+        revisions_included AS "revisionsIncluded",
+        total_discount_type AS "totalDiscountType",
+        total_discount_value AS "totalDiscountValue",
+        created_at AS "createdAt",
+        updated_at AS "updatedAt"
+      FROM quotes
+      WHERE id = $1 AND user_id = $2
+      LIMIT 1`,
+      [id, userId],
+    );
+
+    return legacyRow ? mapQuoteRow(withLegacyQuoteDefaults(legacyRow)) : null;
+  }
 }
 
 export async function getQuoteWithRelations(userId: string, id: string) {
@@ -443,80 +492,155 @@ export async function createQuote(
   userId: string,
   data: Record<string, unknown>,
 ) {
-  const row = await dbQueryOne<QuoteRow>(
-    `INSERT INTO quotes (
-      id,
-      user_id,
-      number,
-      title,
-      status,
-      client_id,
-      language,
-      currency,
-      valid_until,
-      vat_enabled,
-      vat_rate,
-      show_client_details_in_pdf,
-      show_company_details_in_pdf,
-      intro_content_markdown,
-      terms_content_markdown,
-      revisions_included,
-      total_discount_type,
-      total_discount_value,
-      invoicing_state
-    ) VALUES (
-      $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,COALESCE($19,'not_invoiced')
-    )
-    RETURNING
-      id,
-      user_id AS "userId",
-      number,
-      title,
-      status,
-      client_id AS "clientId",
-      language,
-      currency,
-      valid_until AS "validUntil",
-      vat_enabled AS "vatEnabled",
-      vat_rate AS "vatRate",
-      show_client_details_in_pdf AS "showClientDetailsInPdf",
-      show_company_details_in_pdf AS "showCompanyDetailsInPdf",
-      intro_content_markdown AS "introContentMarkdown",
-      terms_content_markdown AS "termsContentMarkdown",
-      revisions_included AS "revisionsIncluded",
-      total_discount_type AS "totalDiscountType",
-      total_discount_value AS "totalDiscountValue",
-      invoicing_state AS "invoicingState",
-      created_at AS "createdAt",
-      updated_at AS "updatedAt"`,
-    [
-      createEntityId("quo"),
-      userId,
-      data.number,
-      data.title,
-      data.status,
-      data.clientId,
-      data.language,
-      data.currency,
-      data.validUntil,
-      data.vatEnabled,
-      data.vatRate,
-      data.showClientDetailsInPdf,
-      data.showCompanyDetailsInPdf,
-      data.introContentMarkdown,
-      data.termsContentMarkdown,
-      data.revisionsIncluded,
-      data.totalDiscountType,
-      data.totalDiscountValue,
-      data.invoicingState ?? "not_invoiced",
-    ],
-  );
+  const quoteId = createEntityId("quo");
 
-  if (!row) {
-    throw new Error("QUOTE_CREATE_FAILED");
+  try {
+    const row = await dbQueryOne<QuoteRow>(
+      `INSERT INTO quotes (
+        id,
+        user_id,
+        number,
+        title,
+        status,
+        client_id,
+        language,
+        currency,
+        valid_until,
+        vat_enabled,
+        vat_rate,
+        show_client_details_in_pdf,
+        show_company_details_in_pdf,
+        intro_content_markdown,
+        terms_content_markdown,
+        revisions_included,
+        total_discount_type,
+        total_discount_value,
+        invoicing_state
+      ) VALUES (
+        $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,COALESCE($19,'not_invoiced')
+      )
+      RETURNING
+        id,
+        user_id AS "userId",
+        number,
+        title,
+        status,
+        client_id AS "clientId",
+        language,
+        currency,
+        valid_until AS "validUntil",
+        vat_enabled AS "vatEnabled",
+        vat_rate AS "vatRate",
+        show_client_details_in_pdf AS "showClientDetailsInPdf",
+        show_company_details_in_pdf AS "showCompanyDetailsInPdf",
+        intro_content_markdown AS "introContentMarkdown",
+        terms_content_markdown AS "termsContentMarkdown",
+        revisions_included AS "revisionsIncluded",
+        total_discount_type AS "totalDiscountType",
+        total_discount_value AS "totalDiscountValue",
+        invoicing_state AS "invoicingState",
+        created_at AS "createdAt",
+        updated_at AS "updatedAt"`,
+      [
+        quoteId,
+        userId,
+        data.number,
+        data.title,
+        data.status,
+        data.clientId,
+        data.language,
+        data.currency,
+        data.validUntil,
+        data.vatEnabled,
+        data.vatRate,
+        data.showClientDetailsInPdf,
+        data.showCompanyDetailsInPdf,
+        data.introContentMarkdown,
+        data.termsContentMarkdown,
+        data.revisionsIncluded,
+        data.totalDiscountType,
+        data.totalDiscountValue,
+        data.invoicingState ?? "not_invoiced",
+      ],
+    );
+
+    if (!row) {
+      throw new Error("QUOTE_CREATE_FAILED");
+    }
+
+    return mapQuoteRow(row);
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    if (!msg.includes("column") && !msg.includes("does not exist")) {
+      throw error;
+    }
+
+    const legacyRow = await dbQueryOne<LegacyQuoteRow>(
+      `INSERT INTO quotes (
+        id,
+        user_id,
+        number,
+        title,
+        status,
+        client_id,
+        language,
+        currency,
+        valid_until,
+        vat_enabled,
+        vat_rate,
+        intro_content_markdown,
+        terms_content_markdown,
+        revisions_included,
+        total_discount_type,
+        total_discount_value
+      ) VALUES (
+        $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16
+      )
+      RETURNING
+        id,
+        user_id AS "userId",
+        number,
+        title,
+        status,
+        client_id AS "clientId",
+        language,
+        currency,
+        valid_until AS "validUntil",
+        vat_enabled AS "vatEnabled",
+        vat_rate AS "vatRate",
+        intro_content_markdown AS "introContentMarkdown",
+        terms_content_markdown AS "termsContentMarkdown",
+        revisions_included AS "revisionsIncluded",
+        total_discount_type AS "totalDiscountType",
+        total_discount_value AS "totalDiscountValue",
+        created_at AS "createdAt",
+        updated_at AS "updatedAt"`,
+      [
+        quoteId,
+        userId,
+        data.number,
+        data.title,
+        data.status,
+        data.clientId,
+        data.language,
+        data.currency,
+        data.validUntil,
+        data.vatEnabled,
+        data.vatRate,
+        data.introContentMarkdown,
+        data.termsContentMarkdown,
+        data.revisionsIncluded,
+        data.totalDiscountType,
+        data.totalDiscountValue,
+      ],
+    );
+
+    if (!legacyRow) {
+      throw new Error("QUOTE_CREATE_FAILED");
+    }
+
+    return mapQuoteRow(withLegacyQuoteDefaults(legacyRow));
   }
-
-  return mapQuoteRow(row);
 }
 
 export async function updateQuote(
