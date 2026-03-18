@@ -39,18 +39,30 @@ function parseYearCounter(number: string): { year: number; counter: number } | n
   return { year, counter };
 }
 
+function isMissingInvoiceSchema(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.includes("does not exist") || message.includes("column") || message.includes("relation");
+}
+
 export async function reserveNextInvoiceNumber(
   userId: string,
   issueDate: Date = new Date(),
 ): Promise<string> {
   const targetYear = issueDate.getUTCFullYear();
 
-  const rows = await dbQuery<{ invoiceNumber: string }>(
-    `SELECT invoice_number AS "invoiceNumber"
-     FROM invoices
-     WHERE user_id = $1`,
-    [userId],
-  );
+  let rows: Array<{ invoiceNumber: string }> = [];
+  try {
+    rows = await dbQuery<{ invoiceNumber: string }>(
+      `SELECT invoice_number AS "invoiceNumber"
+       FROM invoices
+       WHERE user_id = $1`,
+      [userId],
+    );
+  } catch (error) {
+    if (!isMissingInvoiceSchema(error)) {
+      throw error;
+    }
+  }
 
   let maxCounter = 0;
   for (const row of rows) {

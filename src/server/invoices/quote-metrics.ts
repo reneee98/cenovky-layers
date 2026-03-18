@@ -18,6 +18,11 @@ export type QuoteInvoicingMetrics = {
   invoicingState: "not_invoiced" | "partially_invoiced" | "fully_invoiced";
 };
 
+function isMissingInvoiceSchema(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.includes("does not exist") || message.includes("column") || message.includes("relation");
+}
+
 async function readQuoteTotals(client: PoolClient | undefined, userId: string, quoteId: string) {
   const quote = await dbQueryOne<{
     id: string;
@@ -92,15 +97,22 @@ export async function getQuoteInvoicingMetrics(
     return null;
   }
 
-  const aggregate = await dbQueryOne<{ total: number | string | null }>(
-    `SELECT COALESCE(SUM(total), 0) AS total
-     FROM invoices
-     WHERE user_id = $1
-       AND quote_id = $2
-       AND status <> 'cancelled'`,
-    [userId, quoteId],
-    dbClient,
-  );
+  let aggregate: { total: number | string | null } | null = null;
+  try {
+    aggregate = await dbQueryOne<{ total: number | string | null }>(
+      `SELECT COALESCE(SUM(total), 0) AS total
+       FROM invoices
+       WHERE user_id = $1
+         AND quote_id = $2
+         AND status <> 'cancelled'`,
+      [userId, quoteId],
+      dbClient,
+    );
+  } catch (error) {
+    if (!isMissingInvoiceSchema(error)) {
+      throw error;
+    }
+  }
 
   const invoicedAmount = normalizeInvoicedAmount(numericToNumber(aggregate?.total ?? 0));
   const remainingToInvoice = calculateRemainingToInvoice(quoteTotals.quoteTotal, invoicedAmount);
@@ -181,24 +193,26 @@ export async function listQuotesWithInvoicingMetrics(
 
   const quoteIds = quotes.map((quote) => quote.id);
 
-  const [items, aggregates] = await Promise.all([
-    dbQuery<{
-      quoteId: string;
-      qty: number | string;
-      unitPrice: number | string;
-      discountPct: number | string;
-    }>(
-      `SELECT
-        quote_id AS "quoteId",
-        qty,
-        unit_price AS "unitPrice",
-        discount_pct AS "discountPct"
-      FROM quote_items
-      WHERE user_id = $1
-        AND quote_id = ANY($2::text[])`,
-      [userId, quoteIds],
-    ),
-    dbQuery<{ quoteId: string; total: number | string | null }>(
+  const items = await dbQuery<{
+    quoteId: string;
+    qty: number | string;
+    unitPrice: number | string;
+    discountPct: number | string;
+  }>(
+    `SELECT
+      quote_id AS "quoteId",
+      qty,
+      unit_price AS "unitPrice",
+      discount_pct AS "discountPct"
+    FROM quote_items
+    WHERE user_id = $1
+      AND quote_id = ANY($2::text[])`,
+    [userId, quoteIds],
+  );
+
+  let aggregates: Array<{ quoteId: string; total: number | string | null }> = [];
+  try {
+    aggregates = await dbQuery<{ quoteId: string; total: number | string | null }>(
       `SELECT
         quote_id AS "quoteId",
         COALESCE(SUM(total), 0) AS total
@@ -208,8 +222,12 @@ export async function listQuotesWithInvoicingMetrics(
         AND status <> 'cancelled'
       GROUP BY quote_id`,
       [userId],
-    ),
-  ]);
+    );
+  } catch (error) {
+    if (!isMissingInvoiceSchema(error)) {
+      throw error;
+    }
+  }
 
   const itemsByQuoteId = new Map<string, Array<{ qty: number; unitPrice: number; discountPct: number }>>();
   for (const item of items) {
