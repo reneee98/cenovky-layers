@@ -518,16 +518,17 @@ export async function createQuote(
         vat_enabled,
         vat_rate,
         show_client_details_in_pdf,
-        show_company_details_in_pdf,
-        intro_content_markdown,
-        terms_content_markdown,
-        revisions_included,
-        total_discount_type,
-        total_discount_value,
-        invoicing_state
-      ) VALUES (
-        $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,COALESCE($19,'not_invoiced')
-      )
+      show_company_details_in_pdf,
+      intro_content_markdown,
+      terms_content_markdown,
+      revisions_included,
+      total_discount_type,
+      total_discount_value,
+      invoicing_state,
+      updated_at
+    ) VALUES (
+      $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,COALESCE($19,'not_invoiced'),NOW()
+    )
       RETURNING
         id,
         user_id AS "userId",
@@ -601,9 +602,10 @@ export async function createQuote(
         terms_content_markdown,
         revisions_included,
         total_discount_type,
-        total_discount_value
+        total_discount_value,
+        updated_at
       ) VALUES (
-        $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16
+        $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,NOW()
       )
       RETURNING
         id,
@@ -847,9 +849,10 @@ export async function duplicateQuote(
         revisions_included,
         total_discount_type,
         total_discount_value,
-        invoicing_state
+        invoicing_state,
+        updated_at
       ) VALUES (
-        $1,$2,$3,$4,'draft',$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,'not_invoiced'
+        $1,$2,$3,$4,'draft',$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,'not_invoiced',NOW()
       )
       RETURNING
         id,
