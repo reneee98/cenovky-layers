@@ -39,21 +39,27 @@ export default async function QuoteBuilderPage({ params, searchParams }: QuoteBu
   const userId = await requireUserId();
   const [{ id }, query] = await Promise.all([params, searchParams]);
 
-  const [quote, clients, catalogItems, snippets] = await Promise.all([
-    getQuoteWithRelations(userId, id),
-    listClients(userId),
-    listCatalogItems(userId),
-    listSnippets(userId),
-  ]);
+  const quote = await getQuoteWithRelations(userId, id);
 
   if (!quote) {
     notFound();
   }
 
-  const [invoicingMetrics, suggestedInvoiceNumber] = await Promise.all([
-    getQuoteInvoicingMetrics(userId, quote.id),
-    reserveNextInvoiceNumber(userId, new Date()),
-  ]);
+  const [clientsResult, catalogItemsResult, snippetsResult, invoicingResult, invoiceNumberResult] =
+    await Promise.allSettled([
+      listClients(userId),
+      listCatalogItems(userId),
+      listSnippets(userId),
+      getQuoteInvoicingMetrics(userId, quote.id),
+      reserveNextInvoiceNumber(userId, new Date()),
+    ]);
+
+  const clients = clientsResult.status === "fulfilled" ? clientsResult.value : [];
+  const catalogItems = catalogItemsResult.status === "fulfilled" ? catalogItemsResult.value : [];
+  const snippets = snippetsResult.status === "fulfilled" ? snippetsResult.value : [];
+  const invoicingMetrics = invoicingResult.status === "fulfilled" ? invoicingResult.value : null;
+  const suggestedInvoiceNumber =
+    invoiceNumberResult.status === "fulfilled" ? invoiceNumberResult.value : `${new Date().getUTCFullYear()}0001`;
   const suggestedVariableSymbol = buildDefaultVariableSymbol(suggestedInvoiceNumber);
 
   const client = quote.client as {

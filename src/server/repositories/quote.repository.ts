@@ -365,7 +365,7 @@ export async function getQuoteById(userId: string, id: string) {
 }
 
 export async function getQuoteWithRelations(userId: string, id: string) {
-  const [quote, client, items, scopeItems] = await Promise.all([
+  const [quote, client, items] = await Promise.all([
     getQuoteById(userId, id),
     dbQueryOne<{
       id: string;
@@ -455,7 +455,15 @@ export async function getQuoteWithRelations(userId: string, id: string) {
       ORDER BY sort_order ASC`,
       [id, userId],
     ),
-    dbQuery<ScopeItemRow>(
+  ]);
+
+  if (!quote || !client) {
+    return null;
+  }
+
+  let scopeItems: ScopeItemRow[] = [];
+  try {
+    scopeItems = await dbQuery<ScopeItemRow>(
       `SELECT
         id,
         user_id AS "userId",
@@ -469,11 +477,12 @@ export async function getQuoteWithRelations(userId: string, id: string) {
       WHERE quote_id = $1 AND user_id = $2
       ORDER BY sort_order ASC`,
       [id, userId],
-    ),
-  ]);
-
-  if (!quote || !client) {
-    return null;
+    );
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    if (!msg.includes("relation") && !msg.includes("column") && !msg.includes("does not exist")) {
+      throw error;
+    }
   }
 
   return {
