@@ -3,7 +3,7 @@ import { isQuoteItemSectionDescription } from "@/lib/quotes/items";
 import { calculateLineTotal } from "@/lib/quotes/totals";
 import { resolveImageDataUrl } from "@/server/pdf/image-data-url";
 import {
-  createOrReplaceSingleQuoteVersion,
+  createNextQuoteVersion,
   getQuoteVersionById,
   getQuoteWithRelations,
   getSettings,
@@ -240,7 +240,7 @@ export async function exportQuoteToPdfVersion(
   const snapshot = toSnapshot(quote, settings, generatedAtIso, logoImage);
   const pdfBytes = await renderQuotePdf(snapshot);
 
-  const createdVersion = await createOrReplaceSingleQuoteVersion(
+  const createdVersion = await createNextQuoteVersion(
     userId,
     quote.id,
     snapshot,

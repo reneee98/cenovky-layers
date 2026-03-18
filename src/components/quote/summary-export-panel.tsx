@@ -1,7 +1,6 @@
 "use client";
 
 import type { QuoteStatus } from "@/types/domain";
-import Link from "next/link";
 import { Download, Save } from "lucide-react";
 
 import { StatusDropdown } from "@/components/quote/status-dropdown";
@@ -118,10 +117,10 @@ export function SummaryExportPanel({
             {labels.save}
           </Button>
           <Button asChild variant="accent" className="w-full">
-            <Link href={`/api/quotes/${quoteId}/download`}>
+            <a href={`/api/quotes/${quoteId}/download`}>
               <Download className="mr-1.5 h-4 w-4" />
               {labels.exportPdf}
-            </Link>
+            </a>
           </Button>
         </div>
       </CardContent>

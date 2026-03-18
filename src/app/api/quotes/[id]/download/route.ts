@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getCurrentQuotePdfDownloadPayload } from "@/server/quotes/pdf-export";
+import {
+  exportQuoteToPdfVersion,
+  getQuoteVersionDownloadPayload,
+} from "@/server/quotes/pdf-export";
 
 export const runtime = "nodejs";
 
@@ -20,10 +23,16 @@ export async function GET(
 
   const { id } = await context.params;
   try {
-    const payload = await getCurrentQuotePdfDownloadPayload(user.id, id);
+    const exportedVersion = await exportQuoteToPdfVersion(user.id, id);
+
+    if (!exportedVersion) {
+      return NextResponse.json({ error: "Ponuka nebola najdena." }, { status: 404 });
+    }
+
+    const payload = await getQuoteVersionDownloadPayload(user.id, exportedVersion.versionId);
 
     if (!payload) {
-      return NextResponse.json({ error: "Ponuka nebola najdena." }, { status: 404 });
+      return NextResponse.json({ error: "Nepodarilo sa pripravit PDF verziu." }, { status: 500 });
     }
 
     return new NextResponse(Buffer.from(payload.bytes), {
