@@ -1,7 +1,26 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve, sep } from "node:path";
 
-const STORAGE_ROOT = resolve(process.cwd(), "storage");
+function getStorageRoot(): string {
+  const configuredRoot = process.env.QUOTE_PDF_STORAGE_ROOT?.trim();
+  if (configuredRoot) {
+    return resolve(configuredRoot);
+  }
+
+  const cwd = process.cwd();
+  const serverlessRoot =
+    process.env.VERCEL === "1" ||
+    process.env.VERCEL === "true" ||
+    cwd.startsWith("/var/task");
+
+  if (serverlessRoot) {
+    return resolve(process.env.TMPDIR ?? "/tmp", "cenovka-storage");
+  }
+
+  return resolve(cwd, "storage");
+}
+
+const STORAGE_ROOT = getStorageRoot();
 
 function resolveStoragePath(reference: string): string | null {
   const normalizedReference = reference.trim().replace(/^\/+/, "");
