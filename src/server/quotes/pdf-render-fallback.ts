@@ -2,6 +2,7 @@ import { PDFDocument, StandardFonts, type PDFFont, type PDFPage } from "pdf-lib"
 
 import { isQuoteItemSectionDescription } from "@/lib/quotes/items";
 import { calculateLineTotal } from "@/lib/quotes/totals";
+import { parseItemDescription } from "@/server/quotes/item-description-format";
 import type { QuoteVersionSnapshot } from "@/server/quotes/pdf-snapshot";
 
 const A4_WIDTH = 595.28;
@@ -101,6 +102,119 @@ function drawWrappedText(params: {
       size: params.fontSize,
       font: params.font,
     });
+    cursorY -= params.lineHeight;
+  }
+
+  return cursorY;
+}
+
+function tokenizeRichSegments(
+  segments: Array<{ text: string; bold: boolean }>,
+): Array<{ text: string; bold: boolean }> {
+  return segments.flatMap((segment) =>
+    segment.text
+      .split(/(\s+)/)
+      .filter((part) => part.length > 0)
+      .map((part) => ({
+        text: part,
+        bold: segment.bold,
+      })),
+  );
+}
+
+function wrapRichTextLines(params: {
+  segments: Array<{ text: string; bold: boolean }>;
+  maxWidth: number;
+  regularFont: PDFFont;
+  boldFont: PDFFont;
+  fontSize: number;
+  prefix?: string;
+}): Array<Array<{ text: string; bold: boolean }>> {
+  const tokens = tokenizeRichSegments(params.segments);
+  const lines: Array<Array<{ text: string; bold: boolean }>> = [];
+  let currentLine: Array<{ text: string; bold: boolean }> = [];
+  let currentWidth = 0;
+  const prefixWidth = params.prefix
+    ? params.regularFont.widthOfTextAtSize(params.prefix, params.fontSize)
+    : 0;
+
+  for (const token of tokens) {
+    const font = token.bold ? params.boldFont : params.regularFont;
+    const tokenWidth = font.widthOfTextAtSize(token.text, params.fontSize);
+    const effectiveLineWidth = lines.length === 0 ? currentWidth + prefixWidth : currentWidth;
+
+    if (
+      currentLine.length > 0 &&
+      effectiveLineWidth + tokenWidth > params.maxWidth &&
+      token.text.trim().length > 0
+    ) {
+      lines.push(currentLine);
+      currentLine = token.text.trim().length === 0 ? [] : [token];
+      currentWidth = token.text.trim().length === 0 ? 0 : tokenWidth;
+      continue;
+    }
+
+    if (currentLine.length === 0 && token.text.trim().length === 0) {
+      continue;
+    }
+
+    currentLine.push(token);
+    currentWidth += tokenWidth;
+  }
+
+  if (currentLine.length > 0) {
+    lines.push(currentLine);
+  }
+
+  return lines.length > 0 ? lines : [[{ text: "", bold: false }]];
+}
+
+function drawWrappedRichText(params: {
+  page: PDFPage;
+  segments: Array<{ text: string; bold: boolean }>;
+  x: number;
+  y: number;
+  maxWidth: number;
+  regularFont: PDFFont;
+  boldFont: PDFFont;
+  fontSize: number;
+  lineHeight: number;
+  prefix?: string;
+}): number {
+  const lines = wrapRichTextLines({
+    segments: params.segments,
+    maxWidth: params.maxWidth,
+    regularFont: params.regularFont,
+    boldFont: params.boldFont,
+    fontSize: params.fontSize,
+    prefix: params.prefix,
+  });
+  let cursorY = params.y;
+
+  for (let lineIndex = 0; lineIndex < lines.length; lineIndex += 1) {
+    let cursorX = params.x;
+
+    if (lineIndex === 0 && params.prefix) {
+      params.page.drawText(params.prefix, {
+        x: cursorX,
+        y: cursorY,
+        size: params.fontSize,
+        font: params.regularFont,
+      });
+      cursorX += params.regularFont.widthOfTextAtSize(params.prefix, params.fontSize);
+    }
+
+    for (const segment of lines[lineIndex]) {
+      const font = segment.bold ? params.boldFont : params.regularFont;
+      params.page.drawText(segment.text, {
+        x: cursorX,
+        y: cursorY,
+        size: params.fontSize,
+        font,
+      });
+      cursorX += font.widthOfTextAtSize(segment.text, params.fontSize);
+    }
+
     cursorY -= params.lineHeight;
   }
 
@@ -328,6 +442,26 @@ export async function renderQuotePdfFallback(
       fontSize: BASE_FONT_SIZE,
       lineHeight: BASE_LINE_HEIGHT,
     }) - 2;
+
+    const descriptionLines = parseItemDescription(item.description);
+    for (const descriptionLine of descriptionLines) {
+      itemsY = drawWrappedRichText({
+        page: itemsPage,
+        segments: descriptionLine.segments,
+        x: PAGE_MARGIN + 10,
+        y: itemsY,
+        maxWidth: A4_WIDTH - PAGE_MARGIN * 2 - 10,
+        regularFont,
+        boldFont,
+        fontSize: BASE_FONT_SIZE - 1,
+        lineHeight: BASE_LINE_HEIGHT - 2,
+        prefix: descriptionLine.kind === "bullet" ? "• " : undefined,
+      });
+    }
+
+    if (descriptionLines.length > 0) {
+      itemsY -= 2;
+    }
   }
 
   const page3 = doc.addPage([A4_WIDTH, A4_HEIGHT]);

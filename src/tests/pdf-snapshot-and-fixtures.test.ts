@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { getPdfPreviewFixture, listPdfPreviewFixtureIds } from "../server/quotes/pdf-preview-fixtures";
+import { parseItemDescription } from "../server/quotes/item-description-format";
 import { parseQuoteVersionSnapshot } from "../server/quotes/pdf-snapshot";
 
 function buildValidSnapshot() {
@@ -92,4 +93,34 @@ test("pdf preview fixtures: list and load known fixtures", () => {
     assert.ok(fixture);
     assert.ok(parseQuoteVersionSnapshot(fixture));
   }
+});
+
+test("item description formatter: parses bold segments in paragraphs", () => {
+  const parsed = parseItemDescription("Prva **zvyraznena** veta");
+
+  assert.deepEqual(parsed, [
+    {
+      kind: "paragraph",
+      segments: [
+        { text: "Prva ", bold: false },
+        { text: "zvyraznena", bold: true },
+        { text: " veta", bold: false },
+      ],
+    },
+  ]);
+});
+
+test("item description formatter: preserves bullet lines and bold text", () => {
+  const parsed = parseItemDescription("- **Bold** bod\n- druhy bod");
+
+  assert.deepEqual(parsed, [
+    {
+      kind: "bullet",
+      segments: [{ text: "Bold", bold: true }, { text: " bod", bold: false }],
+    },
+    {
+      kind: "bullet",
+      segments: [{ text: "druhy bod", bold: false }],
+    },
+  ]);
 });

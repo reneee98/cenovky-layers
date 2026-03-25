@@ -153,7 +153,7 @@ export const MICROCOPY: Record<Language, LocaleCopy> = {
       editDescription: "Upravit popis",
       hideDescription: "Skryt popis",
       descriptionPlaceholder: "Popis polozky (podporuje aj bullet body)...",
-      descriptionHint: "Tip: pouzi '-' alebo '*' na odrazky.",
+      descriptionHint: "Tip: pouzi '-' alebo '*' na odrazky a '**text**' pre bold.",
     },
     statuses: {
       draft: "Koncept",
@@ -238,7 +238,7 @@ export const MICROCOPY: Record<Language, LocaleCopy> = {
       editDescription: "Edit description",
       hideDescription: "Hide description",
       descriptionPlaceholder: "Item description (supports bullet points)...",
-      descriptionHint: "Tip: use '-' or '*' for bullet points.",
+      descriptionHint: "Tip: use '-' or '*' for bullet points and '**text**' for bold.",
     },
     statuses: {
       draft: "Draft",

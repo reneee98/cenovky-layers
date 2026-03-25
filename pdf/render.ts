@@ -7,6 +7,11 @@ import { chromium } from "playwright-core";
 
 import { isQuoteItemSectionDescription } from "@/lib/quotes/items";
 import { calculateLineTotal } from "@/lib/quotes/totals";
+import {
+  areAllItemDescriptionLinesBullets,
+  getItemDescriptionLines,
+  parseItemDescription,
+} from "@/server/quotes/item-description-format";
 import type { QuoteVersionSnapshot } from "@/server/quotes/pdf-snapshot";
 
 const PDF_TEMPLATE_HTML_PATH = resolve(process.cwd(), "pdf/template.html");
@@ -316,45 +321,37 @@ function buildBillingLinesHtml(lines: string[]): string {
     .join("\n");
 }
 
-const ITEM_DESCRIPTION_BULLET_PATTERN = /^(?:[-*•]\s+|\d+[.)]\s+)/;
-
-function getItemDescriptionLines(description: string | null): string[] {
-  if (!description) {
-    return [];
-  }
-
+function renderDescriptionSegmentsHtml(
+  description: ReturnType<typeof parseItemDescription>[number]["segments"],
+): string {
   return description
-    .replace(/\r\n/g, "\n")
-    .split("\n")
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0);
-}
-
-function stripItemDescriptionBulletPrefix(line: string): string {
-  return line.replace(ITEM_DESCRIPTION_BULLET_PATTERN, "").trim();
+    .map((segment) =>
+      segment.bold
+        ? `<strong>${escapeHtml(segment.text)}</strong>`
+        : escapeHtml(segment.text)
+    )
+    .join("");
 }
 
 function buildItemDescriptionHtml(description: string | null): string {
-  const lines = getItemDescriptionLines(description);
+  const lines = parseItemDescription(description);
 
   if (lines.length === 0) {
     return "";
   }
 
-  const allBulletLines = lines.every((line) =>
-    ITEM_DESCRIPTION_BULLET_PATTERN.test(line),
-  );
+  const allBulletLines = areAllItemDescriptionLinesBullets(getItemDescriptionLines(description));
 
   if (allBulletLines) {
     const listItemsHtml = lines
-      .map((line) => `<li>${escapeHtml(ensureNonEmpty(stripItemDescriptionBulletPrefix(line)))}</li>`)
+      .map((line) => `<li>${renderDescriptionSegmentsHtml(line.segments)}</li>`)
       .join("\n");
 
     return `<ul class="item-description-list">${listItemsHtml}</ul>`;
   }
 
   const paragraphLinesHtml = lines
-    .map((line) => `<p class="item-description">${escapeHtml(ensureNonEmpty(line))}</p>`)
+    .map((line) => `<p class="item-description">${renderDescriptionSegmentsHtml(line.segments)}</p>`)
     .join("\n");
 
   return `<div class="item-description-block">${paragraphLinesHtml}</div>`;
