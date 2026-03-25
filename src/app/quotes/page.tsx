@@ -6,6 +6,7 @@ import {
   duplicateQuoteAction,
 } from "@/app/quotes/actions";
 import { DeleteQuoteButton } from "@/app/quotes/delete-quote-button";
+import { QuoteExportPdfButton } from "@/components/quote/export-pdf-button";
 import { QuoteStatusSelect } from "@/app/quotes/quote-status-select";
 import { AppShell } from "@/components/app-shell";
 import { requireUserId } from "@/lib/auth";
@@ -268,12 +269,14 @@ export default async function QuotesPage({ searchParams }: QuotesPageProps) {
                           Duplikovať
                         </button>
                       </form>
-                      <a
-                        href={`/api/quotes/${quote.id}/download`}
+                      <QuoteExportPdfButton
+                        quoteId={quote.id}
+                        label="Exportovať PDF"
+                        fallbackFileName={quote.number}
                         className="ui-btn ui-btn--secondary ui-btn--sm"
                       >
                         PDF
-                      </a>
+                      </QuoteExportPdfButton>
                       <form action={deleteQuoteAction}>
                         <input type="hidden" name="quote_id" value={quote.id} />
                         <DeleteQuoteButton quoteNumber={quote.number} iconOnly />
@@ -377,12 +380,14 @@ export default async function QuotesPage({ searchParams }: QuotesPageProps) {
                                 </IconActionButton>
                               </form>
 
-                              <IconActionLink
-                                href={`/api/quotes/${quote.id}/download`}
+                              <QuoteExportPdfButton
+                                quoteId={quote.id}
                                 label="Exportovať PDF"
+                                fallbackFileName={quote.number}
+                                className="ui-icon-action"
                               >
                                 <ExportIcon />
-                              </IconActionLink>
+                              </QuoteExportPdfButton>
 
                               <form action={deleteQuoteAction}>
                                 <input type="hidden" name="quote_id" value={quote.id} />

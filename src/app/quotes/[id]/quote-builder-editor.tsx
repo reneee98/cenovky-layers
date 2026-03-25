@@ -7,6 +7,7 @@ import { toast } from "sonner";
 
 import { AutosaveIndicator, type AutosaveState } from "@/components/quote/autosave-indicator";
 import type { CatalogPickerItem } from "@/components/quote/catalog-picker-dialog";
+import { QuoteExportPdfButton } from "@/components/quote/export-pdf-button";
 import { ItemsTable, type QuoteItemRow, createEmptyItemRow } from "@/components/quote/items-table";
 import { MICROCOPY } from "@/components/quote/microcopy";
 import { QuoteHeaderBar } from "@/components/quote/quote-header-bar";
@@ -38,6 +39,8 @@ import { formatCurrency, formatTime } from "@/lib/format";
 import { QUOTE_ITEM_SECTION_MARKER } from "@/lib/quotes/items";
 import { calculateQuoteTotals } from "@/lib/quotes/totals";
 import { QUOTE_STATUS_OPTIONS } from "@/lib/quotes/status";
+import { cn } from "@/lib/utils";
+import { buttonVariants } from "@/components/ui/shadcn/button";
 
 type ClientOption = {
   id: string;
@@ -180,7 +183,7 @@ export function QuoteBuilderEditor({
   );
 
   const persist = useCallback(
-    async (source: "auto" | "manual") => {
+    async (source: "auto" | "manual"): Promise<boolean> => {
       const requestId = latestRequestIdRef.current + 1;
       latestRequestIdRef.current = requestId;
       setAutosaveState("saving");
@@ -201,7 +204,7 @@ export function QuoteBuilderEditor({
 
         const result = (await response.json()) as { updatedAt?: string };
         if (latestRequestIdRef.current !== requestId) {
-          return;
+          return false;
         }
 
         setAutosaveState("saved");
@@ -214,15 +217,19 @@ export function QuoteBuilderEditor({
         if (source === "manual") {
           toast.success(copy.autosave.savedNow);
         }
+
+        return true;
       } catch {
         if (latestRequestIdRef.current !== requestId) {
-          return;
+          return false;
         }
         setAutosaveState("error");
         setAutosaveMessage(copy.autosave.error);
         if (source === "manual") {
           toast.error(copy.autosave.error);
         }
+
+        return false;
       }
     },
     [copy.autosave.error, copy.autosave.savedNow, copy.autosave.saving, locale, payload, quoteId],
@@ -453,6 +460,7 @@ export function QuoteBuilderEditor({
         <div className="mb-4 hidden md:block lg:hidden">
           <SummaryExportPanel
             quoteId={quoteId}
+            quoteNumber={quoteNumber}
             language={state.language}
             currency={state.currency}
             total={{
@@ -484,6 +492,8 @@ export function QuoteBuilderEditor({
             onSaveNow={() => {
               void persist("manual");
             }}
+            onBeforeExport={() => persist("auto")}
+            exportErrorMessage={copy.autosave.error}
           />
         </div>
 
@@ -524,6 +534,7 @@ export function QuoteBuilderEditor({
             <div className="sticky top-[170px]">
               <SummaryExportPanel
                 quoteId={quoteId}
+                quoteNumber={quoteNumber}
                 language={state.language}
                 currency={state.currency}
                 total={{
@@ -555,6 +566,8 @@ export function QuoteBuilderEditor({
                 onSaveNow={() => {
                   void persist("manual");
                 }}
+                onBeforeExport={() => persist("auto")}
+                exportErrorMessage={copy.autosave.error}
               />
             </div>
           </aside>
@@ -581,12 +594,17 @@ export function QuoteBuilderEditor({
                 >
                   {copy.actions.save}
                 </Button>
-                <Button asChild size="sm" variant="accent">
-                  <a href={`/api/quotes/${quoteId}/download`}>
-                    <FileDown className="mr-1.5 h-4 w-4" />
-                    {copy.actions.exportPdf}
-                  </a>
-                </Button>
+                <QuoteExportPdfButton
+                  quoteId={quoteId}
+                  label={copy.actions.exportPdf}
+                  fallbackFileName={quoteNumber}
+                  beforeDownload={() => persist("auto")}
+                  beforeDownloadErrorMessage={copy.autosave.error}
+                  className={cn(buttonVariants({ variant: "accent", size: "sm" }))}
+                >
+                  <FileDown className="mr-1.5 h-4 w-4" />
+                  {copy.actions.exportPdf}
+                </QuoteExportPdfButton>
                 <CollapsibleTrigger asChild>
                   <Button size="icon" variant="secondary" className="h-9 w-9">
                     <ChevronUp

@@ -35,19 +35,51 @@ export async function GET(
       return NextResponse.json({ error: "Nepodarilo sa pripravit PDF verziu." }, { status: 500 });
     }
 
-    return new NextResponse(Buffer.from(payload.bytes), {
+    const rawBytes = payload.bytes;
+    if (!rawBytes || !(rawBytes instanceof Uint8Array)) {
+      console.error("Quote PDF download: invalid payload.bytes", {
+        quoteId: id,
+        userId: user.id,
+      });
+      return NextResponse.json({ error: "Nepodarilo sa vygenerovat PDF." }, { status: 500 });
+    }
+
+    const body = Buffer.from(rawBytes);
+    if (body.length === 0) {
+      console.error("Quote PDF download: empty PDF bytes", {
+        quoteId: id,
+        userId: user.id,
+      });
+      return NextResponse.json({ error: "Nepodarilo sa vygenerovat PDF." }, { status: 500 });
+    }
+
+    const filename =
+      typeof payload.filename === "string" && payload.filename.trim()
+        ? payload.filename.trim()
+        : "cenova-ponuka.pdf";
+
+    return new NextResponse(body, {
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="${payload.filename}"`,
+        "Content-Disposition": `attachment; filename="${filename.replace(/"/g, '\\"')}"`,
         "Cache-Control": "no-store",
       },
     });
   } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const stack = error instanceof Error ? error.stack : undefined;
     console.error("Quote PDF download failed", {
       quoteId: id,
       userId: user.id,
-      error: error instanceof Error ? error.message : String(error),
+      error: message,
+      stack,
     });
-    return NextResponse.json({ error: "Nepodarilo sa vygenerovat PDF." }, { status: 500 });
+    return NextResponse.json(
+      {
+        error: "Nepodarilo sa vygenerovat PDF.",
+        detail: message,
+      },
+      { status: 500 },
+    );
   }
 }

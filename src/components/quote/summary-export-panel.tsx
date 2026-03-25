@@ -3,6 +3,7 @@
 import type { QuoteStatus } from "@/types/domain";
 import { Download, Save } from "lucide-react";
 
+import { QuoteExportPdfButton } from "@/components/quote/export-pdf-button";
 import { StatusDropdown } from "@/components/quote/status-dropdown";
 import { StatusPill } from "@/components/quote/status-pill";
 import {
@@ -15,9 +16,12 @@ import {
   Separator,
 } from "@/components/ui/shadcn";
 import { formatCurrency } from "@/lib/format";
+import { cn } from "@/lib/utils";
+import { buttonVariants } from "@/components/ui/shadcn/button";
 
 type SummaryExportPanelProps = {
   quoteId: string;
+  quoteNumber: string;
   language: "sk" | "en";
   currency: string;
   total: {
@@ -45,6 +49,8 @@ type SummaryExportPanelProps = {
   statuses: Array<{ value: QuoteStatus; label: string }>;
   onStatusChange: (status: QuoteStatus) => void;
   onSaveNow: () => void;
+  onBeforeExport?: () => Promise<boolean>;
+  exportErrorMessage?: string;
 };
 
 function localeForLanguage(language: "sk" | "en"): string {
@@ -53,6 +59,7 @@ function localeForLanguage(language: "sk" | "en"): string {
 
 export function SummaryExportPanel({
   quoteId,
+  quoteNumber,
   language,
   currency,
   total,
@@ -62,6 +69,8 @@ export function SummaryExportPanel({
   statuses,
   onStatusChange,
   onSaveNow,
+  onBeforeExport,
+  exportErrorMessage,
 }: SummaryExportPanelProps) {
   const locale = localeForLanguage(language);
 
@@ -116,12 +125,17 @@ export function SummaryExportPanel({
             <Save className="mr-1.5 h-4 w-4" />
             {labels.save}
           </Button>
-          <Button asChild variant="accent" className="w-full">
-            <a href={`/api/quotes/${quoteId}/download`}>
-              <Download className="mr-1.5 h-4 w-4" />
-              {labels.exportPdf}
-            </a>
-          </Button>
+          <QuoteExportPdfButton
+            quoteId={quoteId}
+            label={labels.exportPdf}
+            fallbackFileName={quoteNumber}
+            beforeDownload={onBeforeExport}
+            beforeDownloadErrorMessage={exportErrorMessage}
+            className={cn(buttonVariants({ variant: "accent" }), "w-full")}
+          >
+            <Download className="mr-1.5 h-4 w-4" />
+            {labels.exportPdf}
+          </QuoteExportPdfButton>
         </div>
       </CardContent>
     </Card>
