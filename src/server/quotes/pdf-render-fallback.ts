@@ -445,6 +445,11 @@ export async function renderQuotePdfFallback(
 
     const descriptionLines = parseItemDescription(item.description);
     for (const descriptionLine of descriptionLines) {
+      if (descriptionLine.kind === "spacer") {
+        itemsY -= BASE_LINE_HEIGHT - 4;
+        continue;
+      }
+
       itemsY = drawWrappedRichText({
         page: itemsPage,
         segments: descriptionLine.segments,

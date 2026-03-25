@@ -372,7 +372,7 @@ body {
 
 .item-description {
   margin: calc(2 * var(--u)) 0 0;
-  color: var(--subtle);
+  color: #5b6472;
   font-size: calc(12 * var(--u));
   line-height: calc(16 * var(--u));
   font-weight: 400;
@@ -393,11 +393,15 @@ body {
 .item-description-list {
   margin: calc(2 * var(--u)) 0 0 calc(16 * var(--u));
   padding: 0;
-  color: var(--subtle);
+  color: #5b6472;
   font-size: calc(12 * var(--u));
   line-height: calc(16 * var(--u));
   font-weight: 400;
   list-style: disc outside;
+}
+
+.item-description-spacer {
+  height: calc(8 * var(--u));
 }
 
 .item-description-list li + li {

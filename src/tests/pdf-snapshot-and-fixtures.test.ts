@@ -124,3 +124,22 @@ test("item description formatter: preserves bullet lines and bold text", () => {
     },
   ]);
 });
+
+test("item description formatter: preserves empty lines as spacers", () => {
+  const parsed = parseItemDescription("Prvy riadok\n\nDruhy riadok");
+
+  assert.deepEqual(parsed, [
+    {
+      kind: "paragraph",
+      segments: [{ text: "Prvy riadok", bold: false }],
+    },
+    {
+      kind: "spacer",
+      segments: [],
+    },
+    {
+      kind: "paragraph",
+      segments: [{ text: "Druhy riadok", bold: false }],
+    },
+  ]);
+});

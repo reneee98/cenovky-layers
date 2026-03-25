@@ -6,7 +6,7 @@ export type ItemDescriptionSegment = {
 };
 
 export type ItemDescriptionLine = {
-  kind: "bullet" | "paragraph";
+  kind: "bullet" | "paragraph" | "spacer";
   segments: ItemDescriptionSegment[];
 };
 
@@ -62,6 +62,14 @@ export function getItemDescriptionLines(description: string | null): string[] {
     .filter((line) => line.length > 0);
 }
 
+function getItemDescriptionRawLines(description: string | null): string[] {
+  if (!description) {
+    return [];
+  }
+
+  return description.replace(/\r\n/g, "\n").split("\n");
+}
+
 export function stripItemDescriptionBulletPrefix(line: string): string {
   return line.replace(ITEM_DESCRIPTION_BULLET_PATTERN, "").trim();
 }
@@ -71,13 +79,35 @@ export function areAllItemDescriptionLinesBullets(lines: string[]): boolean {
 }
 
 export function parseItemDescription(description: string | null): ItemDescriptionLine[] {
-  const lines = getItemDescriptionLines(description);
-  const allBullets = areAllItemDescriptionLinesBullets(lines);
+  const rawLines = getItemDescriptionRawLines(description);
+  const nonEmptyLines = rawLines.map((line) => line.trim()).filter((line) => line.length > 0);
+  const allBullets = areAllItemDescriptionLinesBullets(nonEmptyLines);
 
-  return lines.map((line) => ({
-    kind: allBullets ? "bullet" : "paragraph",
-    segments: splitBoldSegments(
-      allBullets ? stripItemDescriptionBulletPrefix(line) : line,
-    ),
-  }));
+  return rawLines
+    .map((rawLine) => {
+      const line = rawLine.trim();
+
+      if (line.length === 0) {
+        return {
+          kind: "spacer" as const,
+          segments: [],
+        };
+      }
+
+      return {
+        kind: allBullets ? ("bullet" as const) : ("paragraph" as const),
+        segments: splitBoldSegments(
+          allBullets ? stripItemDescriptionBulletPrefix(line) : line,
+        ),
+      };
+    })
+    .filter((line, index, collection) => {
+      if (line.kind !== "spacer") {
+        return true;
+      }
+
+      const previous = collection[index - 1];
+      const next = collection[index + 1];
+      return Boolean(previous && next);
+    });
 }

@@ -343,15 +343,35 @@ function buildItemDescriptionHtml(description: string | null): string {
   const allBulletLines = areAllItemDescriptionLinesBullets(getItemDescriptionLines(description));
 
   if (allBulletLines) {
-    const listItemsHtml = lines
-      .map((line) => `<li>${renderDescriptionSegmentsHtml(line.segments)}</li>`)
-      .join("\n");
+    const blocks: string[] = [];
+    let listItems: string[] = [];
 
-    return `<ul class="item-description-list">${listItemsHtml}</ul>`;
+    for (const line of lines) {
+      if (line.kind === "spacer") {
+        if (listItems.length > 0) {
+          blocks.push(`<ul class="item-description-list">${listItems.join("\n")}</ul>`);
+          listItems = [];
+        }
+        blocks.push(`<div class="item-description-spacer" aria-hidden="true"></div>`);
+        continue;
+      }
+
+      listItems.push(`<li>${renderDescriptionSegmentsHtml(line.segments)}</li>`);
+    }
+
+    if (listItems.length > 0) {
+      blocks.push(`<ul class="item-description-list">${listItems.join("\n")}</ul>`);
+    }
+
+    return blocks.join("\n");
   }
 
   const paragraphLinesHtml = lines
-    .map((line) => `<p class="item-description">${renderDescriptionSegmentsHtml(line.segments)}</p>`)
+    .map((line) =>
+      line.kind === "spacer"
+        ? `<div class="item-description-spacer" aria-hidden="true"></div>`
+        : `<p class="item-description">${renderDescriptionSegmentsHtml(line.segments)}</p>`
+    )
     .join("\n");
 
   return `<div class="item-description-block">${paragraphLinesHtml}</div>`;
@@ -392,7 +412,7 @@ function buildItemsRowRenders(
       }
 
       const itemDescriptionHtml = buildItemDescriptionHtml(item.description);
-      const descriptionLineCount = getItemDescriptionLines(item.description).length;
+      const descriptionLineCount = parseItemDescription(item.description).length;
       const quantity = escapeHtml(
         rendered?.qty
           ? ensureNonEmpty(rendered.qty)
